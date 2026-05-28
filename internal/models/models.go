@@ -1,0 +1,36 @@
+package models
+
+import "time"
+
+type APIKey struct {
+	ID                 string
+	Name               string
+	KeyHash            string
+	IsActive           bool
+	RateLimitPerMinute int
+	ExpiresAt          *time.Time
+	LastUsedAt         *time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type UsageLog struct {
+	ID               string
+	APIKeyID         string
+	RequestID        string
+	Endpoint         string
+	Model            string
+	PromptTokens     int
+	CompletionTokens int
+	TotalTokens      int
+	EstimatedTokens  bool
+	StatusCode       int
+	LatencyMS        int64
+	CreatedAt        time.Time
+}
+
+type OpenAIUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}

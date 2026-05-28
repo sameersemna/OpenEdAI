@@ -1,0 +1,15 @@
+bin/
+*.db
+*.db-wal
+*.db-shm
+*.log
+.env
+tester-results/
+__pycache__/
+*.pyc
+.DS_Store
+NOTES.md
+web/playwright-report/
+web/test-results/
+web/node_modules/
+screenshots/*

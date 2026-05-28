@@ -1,0 +1,17 @@
+[Unit]
+Description=OpenEdAI Gateway (Go)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sameer
+WorkingDirectory=/home/sameer/Public/Shared/Work/Projects/OpenEdAI
+EnvironmentFile=/home/sameer/Public/Shared/Work/Projects/OpenEdAI/.env
+ExecStart=/usr/local/bin/openedai-gateway
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
