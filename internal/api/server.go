@@ -6,11 +6,13 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"openedai-gateway/internal/config"
 	"openedai-gateway/internal/middleware"
 	"openedai-gateway/internal/models"
+	"openedai-gateway/internal/security"
 	"openedai-gateway/internal/services"
 	"openedai-gateway/internal/storage"
 
@@ -48,12 +50,25 @@ func (s *Server) Router() *gin.Engine {
 
 	v1.POST("/rag/index", s.ragIndex)
 	v1.POST("/rag/search", s.ragSearch)
-	v1.GET("/management/api-keys", s.listAPIKeys)
-	v1.GET("/management/usage", s.usageSummary)
+
+	// Management endpoints
+	mgmt := v1.Group("/management")
+	{
+		// Read-only endpoints (any authenticated key)
+		mgmt.GET("/api-keys", s.listAPIKeys)
+		mgmt.GET("/usage", s.usageSummary)
+
+		// Mutation endpoints (admin keys only)
+		admin := mgmt.Group("", middleware.AdminMiddleware())
+		{
+			admin.POST("/api-keys", s.createAPIKey)
+			admin.POST("/api-keys/:id/revoke", s.revokeAPIKey)
+			admin.POST("/api-keys/:id/rotate", s.rotateAPIKey)
+		}
+	}
 
 	return r
 }
-
 func (s *Server) health(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
 	defer cancel()
@@ -341,4 +356,168 @@ func (s *Server) usageSummary(c *gin.Context) {
 		},
 		"recent": recent,
 	})
+}
+
+func (s *Server) createAPIKey(c *gin.Context) {
+	var req models.CreateAPIKeyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "Invalid request body"}})
+		return
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		name = "managed-key"
+	}
+
+	rateLimit := req.RateLimitPerMinute
+	if rateLimit <= 0 {
+		rateLimit = s.Cfg.DefaultRateLimitPerMinute
+	}
+
+	secret, err := security.GenerateSecretToken(32)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to generate API key"}})
+		return
+	}
+
+	id := uuid.NewString()
+	hash := security.HashSecretToken(secret, s.Cfg.APIKeyHashPepper)
+
+	created, err := s.Store.CreateAPIKey(c.Request.Context(), models.APIKey{
+		ID:                 id,
+		Name:               name,
+		KeyHash:            hash,
+		IsActive:           true,
+		IsAdmin:            req.IsAdmin,
+		RateLimitPerMinute: rateLimit,
+		ExpiresAt:          req.ExpiresAt,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to create API key"}})
+		return
+	}
+
+	plaintextKey := security.FormatSplitAPIKey(id, secret)
+	c.JSON(http.StatusCreated, gin.H{
+		"id":                    created.ID,
+		"name":                  created.Name,
+		"api_key":               plaintextKey,
+		"is_active":             created.IsActive,
+		"rate_limit_per_minute": created.RateLimitPerMinute,
+		"expires_at":            created.ExpiresAt,
+		"last_used_at":          created.LastUsedAt,
+		"created_at":            created.CreatedAt,
+		"updated_at":            created.UpdatedAt,
+	})
+}
+
+func (s *Server) revokeAPIKey(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "Missing API key id"}})
+		return
+	}
+
+	if err := s.Store.RevokeAPIKey(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"message": "API key not found or already inactive"}})
+		return
+	}
+
+	s.evictAPIKeyCaches(c.Request.Context(), id)
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":      id,
+		"revoked": true,
+	})
+}
+
+func (s *Server) rotateAPIKey(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "Missing API key id"}})
+		return
+	}
+
+	var req models.RotateAPIKeyRequest
+	if err := c.ShouldBindJSON(&req); err != nil && err != io.EOF {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "Invalid request body"}})
+		return
+	}
+
+	old, err := s.Store.GetActiveAPIKeyByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"message": "API key not found or inactive"}})
+		return
+	}
+
+	gracePeriod := req.GracePeriodSec
+	if gracePeriod < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "grace_period_sec must be >= 0"}})
+		return
+	}
+
+	expiresAt := time.Now().UTC()
+	if gracePeriod > 0 {
+		expiresAt = expiresAt.Add(time.Duration(gracePeriod) * time.Second)
+	}
+
+	newSecret, err := security.GenerateSecretToken(32)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to generate new API key"}})
+		return
+	}
+
+	newID := uuid.NewString()
+	newHash := security.HashSecretToken(newSecret, s.Cfg.APIKeyHashPepper)
+	keepOldActive := gracePeriod > 0
+	rotated, err := s.Store.RotateAPIKey(c.Request.Context(), id, expiresAt, keepOldActive, models.APIKey{
+		ID:                 newID,
+		Name:               old.Name,
+		KeyHash:            newHash,
+		IsActive:           true,
+		RateLimitPerMinute: old.RateLimitPerMinute,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to rotate API key"}})
+		return
+	}
+
+	s.evictAPIKeyCaches(c.Request.Context(), id)
+
+	c.JSON(http.StatusOK, gin.H{
+		"rotated_from": gin.H{
+			"id":         id,
+			"expires_at": expiresAt,
+		},
+		"new_key": gin.H{
+			"id":                    rotated.ID,
+			"name":                  rotated.Name,
+			"api_key":               security.FormatSplitAPIKey(rotated.ID, newSecret),
+			"is_active":             rotated.IsActive,
+			"rate_limit_per_minute": rotated.RateLimitPerMinute,
+			"created_at":            rotated.CreatedAt,
+			"updated_at":            rotated.UpdatedAt,
+		},
+	})
+}
+
+func (s *Server) evictAPIKeyCaches(ctx context.Context, id string) {
+	_ = s.RedisClient.Del(ctx, "auth:key:"+id).Err()
+
+	rateKeyPattern := s.Cfg.RedisKeyPrefix + ":rate_limit:" + id + ":*"
+	var cursor uint64
+	for {
+		keys, nextCursor, err := s.RedisClient.Scan(ctx, cursor, rateKeyPattern, 100).Result()
+		if err != nil {
+			return
+		}
+		if len(keys) > 0 {
+			_ = s.RedisClient.Del(ctx, keys...).Err()
+		}
+		if nextCursor == 0 {
+			break
+		}
+		cursor = nextCursor
+	}
 }

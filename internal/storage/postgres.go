@@ -7,6 +7,7 @@ import (
 
 	"openedai-gateway/internal/models"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -32,7 +33,7 @@ func (s *PostgresStore) Close() {
 
 func (s *PostgresStore) GetActiveAPIKeyByHash(ctx context.Context, keyHash string) (*models.APIKey, error) {
 	const q = `
-	SELECT id, name, key_hash, is_active, rate_limit_per_minute, expires_at, last_used_at, created_at, updated_at
+	SELECT id, name, key_hash, is_active, is_admin, rate_limit_per_minute, expires_at, last_used_at, created_at, updated_at
 	FROM api_keys
 	WHERE key_hash = $1 AND is_active = TRUE
 	LIMIT 1`
@@ -43,6 +44,7 @@ func (s *PostgresStore) GetActiveAPIKeyByHash(ctx context.Context, keyHash strin
 		&k.Name,
 		&k.KeyHash,
 		&k.IsActive,
+		&k.IsAdmin,
 		&k.RateLimitPerMinute,
 		&k.ExpiresAt,
 		&k.LastUsedAt,
@@ -58,6 +60,149 @@ func (s *PostgresStore) GetActiveAPIKeyByHash(ctx context.Context, keyHash strin
 	}
 
 	return &k, nil
+}
+
+func (s *PostgresStore) GetActiveAPIKeyByID(ctx context.Context, id string) (*models.APIKey, error) {
+	const q = `
+	SELECT id, name, key_hash, is_active, is_admin, rate_limit_per_minute, expires_at, last_used_at, created_at, updated_at
+	FROM api_keys
+	WHERE id = $1 AND is_active = TRUE
+	LIMIT 1`
+
+	var k models.APIKey
+	err := s.Pool.QueryRow(ctx, q, id).Scan(
+		&k.ID,
+		&k.Name,
+		&k.KeyHash,
+		&k.IsActive,
+		&k.IsAdmin,
+		&k.RateLimitPerMinute,
+		&k.ExpiresAt,
+		&k.LastUsedAt,
+		&k.CreatedAt,
+		&k.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if k.ExpiresAt != nil && k.ExpiresAt.Before(time.Now().UTC()) {
+		return nil, errors.New("api key expired")
+	}
+
+	return &k, nil
+}
+
+func (s *PostgresStore) CreateAPIKey(ctx context.Context, key models.APIKey) (*models.APIKey, error) {
+	const q = `
+	INSERT INTO api_keys (
+		id, name, key_hash, is_active, is_admin, rate_limit_per_minute, expires_at, last_used_at
+	) VALUES (
+		$1, $2, $3, $4, $5, $6, $7, $8
+	)
+	RETURNING id, name, key_hash, is_active, is_admin, rate_limit_per_minute, expires_at, last_used_at, created_at, updated_at`
+
+	var out models.APIKey
+	err := s.Pool.QueryRow(ctx, q,
+		key.ID,
+		key.Name,
+		key.KeyHash,
+		key.IsActive,
+		key.IsAdmin,
+		key.RateLimitPerMinute,
+		key.ExpiresAt,
+		key.LastUsedAt,
+	).Scan(
+		&out.ID,
+		&out.Name,
+		&out.KeyHash,
+		&out.IsActive,
+		&out.IsAdmin,
+		&out.RateLimitPerMinute,
+		&out.ExpiresAt,
+		&out.LastUsedAt,
+		&out.CreatedAt,
+		&out.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+func (s *PostgresStore) RevokeAPIKey(ctx context.Context, id string) error {
+	const q = `
+	UPDATE api_keys
+	SET is_active = FALSE, updated_at = NOW()
+	WHERE id = $1 AND is_active = TRUE`
+
+	ct, err := s.Pool.Exec(ctx, q, id)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
+func (s *PostgresStore) RotateAPIKey(ctx context.Context, oldKeyID string, oldExpiresAt time.Time, keepOldActive bool, newKey models.APIKey) (*models.APIKey, error) {
+	tx, err := s.Pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	const updateOld = `
+	UPDATE api_keys
+	SET is_active = $2, expires_at = $3, updated_at = NOW()
+	WHERE id = $1 AND is_active = TRUE`
+	ct, err := tx.Exec(ctx, updateOld, oldKeyID, keepOldActive, oldExpiresAt)
+	if err != nil {
+		return nil, err
+	}
+	if ct.RowsAffected() == 0 {
+		return nil, pgx.ErrNoRows
+	}
+
+	const insertNew = `
+	INSERT INTO api_keys (
+		id, name, key_hash, is_active, rate_limit_per_minute, expires_at, last_used_at
+	) VALUES (
+		$1, $2, $3, $4, $5, $6, $7
+	)
+	RETURNING id, name, key_hash, is_active, rate_limit_per_minute, expires_at, last_used_at, created_at, updated_at`
+
+	var out models.APIKey
+	err = tx.QueryRow(ctx, insertNew,
+		newKey.ID,
+		newKey.Name,
+		newKey.KeyHash,
+		newKey.IsActive,
+		newKey.RateLimitPerMinute,
+		newKey.ExpiresAt,
+		newKey.LastUsedAt,
+	).Scan(
+		&out.ID,
+		&out.Name,
+		&out.KeyHash,
+		&out.IsActive,
+		&out.RateLimitPerMinute,
+		&out.ExpiresAt,
+		&out.LastUsedAt,
+		&out.CreatedAt,
+		&out.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
 }
 
 func (s *PostgresStore) TouchAPIKeyLastUsed(ctx context.Context, apiKeyID string) error {

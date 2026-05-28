@@ -7,6 +7,7 @@ type APIKey struct {
 	Name               string
 	KeyHash            string
 	IsActive           bool
+	IsAdmin            bool
 	RateLimitPerMinute int
 	ExpiresAt          *time.Time
 	LastUsedAt         *time.Time
@@ -41,4 +42,15 @@ type UsageSummary struct {
 	CompletionTokens int64
 	TotalTokens      int64
 	EstimatedCount   int64
+}
+
+type CreateAPIKeyRequest struct {
+	Name               string     `json:"name"`
+	RateLimitPerMinute int        `json:"rate_limit_per_minute"`
+	ExpiresAt          *time.Time `json:"expires_at"`
+	IsAdmin            bool       `json:"is_admin"`
+}
+
+type RotateAPIKeyRequest struct {
+	GracePeriodSec int `json:"grace_period_sec"`
 }
