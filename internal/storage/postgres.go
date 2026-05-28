@@ -93,3 +93,121 @@ func (s *PostgresStore) InsertUsageLog(ctx context.Context, log models.UsageLog)
 	)
 	return err
 }
+
+func (s *PostgresStore) ListAPIKeys(ctx context.Context, limit int) ([]models.APIKey, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	const q = `
+	SELECT id, name, key_hash, is_active, rate_limit_per_minute, expires_at, last_used_at, created_at, updated_at
+	FROM api_keys
+	ORDER BY created_at DESC
+	LIMIT $1`
+
+	rows, err := s.Pool.Query(ctx, q, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]models.APIKey, 0, limit)
+	for rows.Next() {
+		var k models.APIKey
+		if err := rows.Scan(
+			&k.ID,
+			&k.Name,
+			&k.KeyHash,
+			&k.IsActive,
+			&k.RateLimitPerMinute,
+			&k.ExpiresAt,
+			&k.LastUsedAt,
+			&k.CreatedAt,
+			&k.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, k)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return items, nil
+}
+
+func (s *PostgresStore) GetUsageSummary(ctx context.Context, apiKeyID string, from time.Time, to time.Time) (models.UsageSummary, error) {
+	const q = `
+	SELECT
+		COUNT(*) AS request_count,
+		COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+		COALESCE(SUM(completion_tokens), 0) AS completion_tokens,
+		COALESCE(SUM(total_tokens), 0) AS total_tokens,
+		COALESCE(SUM(CASE WHEN estimated_tokens THEN 1 ELSE 0 END), 0) AS estimated_count
+	FROM usage_logs
+	WHERE api_key_id = $1 AND created_at >= $2 AND created_at <= $3`
+
+	var summary models.UsageSummary
+	err := s.Pool.QueryRow(ctx, q, apiKeyID, from, to).Scan(
+		&summary.RequestCount,
+		&summary.PromptTokens,
+		&summary.CompletionTokens,
+		&summary.TotalTokens,
+		&summary.EstimatedCount,
+	)
+	if err != nil {
+		return models.UsageSummary{}, err
+	}
+
+	return summary, nil
+}
+
+func (s *PostgresStore) ListRecentUsage(ctx context.Context, apiKeyID string, limit int) ([]models.UsageLog, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+
+	const q = `
+	SELECT id, api_key_id, request_id, endpoint, model,
+		prompt_tokens, completion_tokens, total_tokens,
+		estimated_tokens, status_code, latency_ms, created_at
+	FROM usage_logs
+	WHERE api_key_id = $1
+	ORDER BY created_at DESC
+	LIMIT $2`
+
+	rows, err := s.Pool.Query(ctx, q, apiKeyID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]models.UsageLog, 0, limit)
+	for rows.Next() {
+		var u models.UsageLog
+		if err := rows.Scan(
+			&u.ID,
+			&u.APIKeyID,
+			&u.RequestID,
+			&u.Endpoint,
+			&u.Model,
+			&u.PromptTokens,
+			&u.CompletionTokens,
+			&u.TotalTokens,
+			&u.EstimatedTokens,
+			&u.StatusCode,
+			&u.LatencyMS,
+			&u.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, u)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return items, nil
+}

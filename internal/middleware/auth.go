@@ -1,12 +1,11 @@
 package middleware
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 	"strings"
 
 	"openedai-gateway/internal/models"
+	"openedai-gateway/internal/security"
 	"openedai-gateway/internal/storage"
 
 	"github.com/gin-gonic/gin"
@@ -29,8 +28,7 @@ func AuthMiddleware(store *storage.PostgresStore, pepper string) gin.HandlerFunc
 		}
 
 		rawKey := strings.TrimSpace(authz[7:])
-		h := sha256.Sum256([]byte(pepper + ":" + rawKey))
-		hash := hex.EncodeToString(h[:])
+		hash := security.HashAPIKey(rawKey, pepper)
 
 		apiKey, err := store.GetActiveAPIKeyByHash(c.Request.Context(), hash)
 		if err != nil {

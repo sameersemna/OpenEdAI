@@ -27,6 +27,10 @@ func (c *QdrantClient) UpsertPoint(ctx context.Context, collection, id string, v
 		return nil
 	}
 
+	if err := c.ensureCollection(ctx, collection, len(vector)); err != nil {
+		return err
+	}
+
 	body, _ := json.Marshal(map[string]any{
 		"points": []map[string]any{{
 			"id":      id,
@@ -51,6 +55,55 @@ func (c *QdrantClient) UpsertPoint(ctx context.Context, collection, id string, v
 		raw, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("qdrant upsert failed: %s", string(raw))
 	}
+	return nil
+}
+
+func (c *QdrantClient) ensureCollection(ctx context.Context, collection string, vectorSize int) error {
+	checkURL := fmt.Sprintf("%s/collections/%s", c.BaseURL, collection)
+	checkReq, err := http.NewRequestWithContext(ctx, http.MethodGet, checkURL, nil)
+	if err != nil {
+		return err
+	}
+
+	checkResp, err := c.Client.Do(checkReq)
+	if err != nil {
+		return err
+	}
+	defer checkResp.Body.Close()
+
+	if checkResp.StatusCode == http.StatusOK {
+		return nil
+	}
+	if checkResp.StatusCode != http.StatusNotFound {
+		raw, _ := io.ReadAll(checkResp.Body)
+		return fmt.Errorf("qdrant collection check failed: %s", string(raw))
+	}
+
+	createBody, _ := json.Marshal(map[string]any{
+		"vectors": map[string]any{
+			"size":     vectorSize,
+			"distance": "Cosine",
+		},
+	})
+
+	createURL := fmt.Sprintf("%s/collections/%s?wait=true", c.BaseURL, collection)
+	createReq, err := http.NewRequestWithContext(ctx, http.MethodPut, createURL, bytes.NewReader(createBody))
+	if err != nil {
+		return err
+	}
+	createReq.Header.Set("Content-Type", "application/json")
+
+	createResp, err := c.Client.Do(createReq)
+	if err != nil {
+		return err
+	}
+	defer createResp.Body.Close()
+
+	if createResp.StatusCode >= 300 {
+		raw, _ := io.ReadAll(createResp.Body)
+		return fmt.Errorf("qdrant create collection failed: %s", string(raw))
+	}
+
 	return nil
 }
 

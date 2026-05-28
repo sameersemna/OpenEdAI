@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"openedai-gateway/internal/config"
@@ -36,7 +37,7 @@ func (s *Server) Router() *gin.Engine {
 
 	v1 := r.Group("/v1")
 	v1.Use(middleware.AuthMiddleware(s.Store, s.Cfg.APIKeyHashPepper))
-	v1.Use(middleware.RateLimitMiddleware(s.RedisClient, s.Cfg.DefaultRateLimitPerMinute))
+	v1.Use(middleware.RateLimitMiddlewareWithPrefix(s.RedisClient, s.Cfg.DefaultRateLimitPerMinute, s.Cfg.RedisKeyPrefix))
 
 	v1.POST("/chat/completions", func(c *gin.Context) {
 		s.proxyOpenAI(c, "/v1/chat/completions")
@@ -47,6 +48,8 @@ func (s *Server) Router() *gin.Engine {
 
 	v1.POST("/rag/index", s.ragIndex)
 	v1.POST("/rag/search", s.ragSearch)
+	v1.GET("/management/api-keys", s.listAPIKeys)
+	v1.GET("/management/usage", s.usageSummary)
 
 	return r
 }
@@ -65,11 +68,23 @@ func (s *Server) health(c *gin.Context) {
 		redisStatus = "down"
 	}
 
+	litellmStatus := "ok"
+	if err := s.LiteLLM.Health(ctx); err != nil {
+		litellmStatus = "down"
+	}
+
+	elasticsearchStatus := "ok"
+	if err := s.Elasticsearch.Health(ctx); err != nil {
+		elasticsearchStatus = "down"
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
 		"checks": gin.H{
-			"postgres": dbStatus,
-			"redis":    redisStatus,
+			"postgres":      dbStatus,
+			"redis":         redisStatus,
+			"litellm":       litellmStatus,
+			"elasticsearch": elasticsearchStatus,
 		},
 	})
 }
@@ -231,4 +246,99 @@ func errString(err error) any {
 		return nil
 	}
 	return err.Error()
+}
+
+func (s *Server) listAPIKeys(c *gin.Context) {
+	limit := 50
+	if raw := c.Query("limit"); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 && n <= 500 {
+			limit = n
+		}
+	}
+
+	keys, err := s.Store.ListAPIKeys(c.Request.Context(), limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to list API keys"}})
+		return
+	}
+
+	masked := make([]gin.H, 0, len(keys))
+	for _, k := range keys {
+		h := k.KeyHash
+		if len(h) > 12 {
+			h = h[:12] + "..."
+		}
+		masked = append(masked, gin.H{
+			"id":                    k.ID,
+			"name":                  k.Name,
+			"key_hash_prefix":       h,
+			"is_active":             k.IsActive,
+			"rate_limit_per_minute": k.RateLimitPerMinute,
+			"expires_at":            k.ExpiresAt,
+			"last_used_at":          k.LastUsedAt,
+			"created_at":            k.CreatedAt,
+			"updated_at":            k.UpdatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"items": masked, "count": len(masked)})
+}
+
+func (s *Server) usageSummary(c *gin.Context) {
+	apiKey := middleware.GetAPIKeyFromContext(c)
+	if apiKey == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Unauthorized"}})
+		return
+	}
+
+	apiKeyID := c.Query("api_key_id")
+	if apiKeyID == "" {
+		apiKeyID = apiKey.ID
+	}
+
+	hours := 24
+	if raw := c.Query("hours"); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 && n <= 24*30 {
+			hours = n
+		}
+	}
+
+	limit := 20
+	if raw := c.Query("limit"); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 && n <= 500 {
+			limit = n
+		}
+	}
+
+	to := time.Now().UTC()
+	from := to.Add(-time.Duration(hours) * time.Hour)
+
+	summary, err := s.Store.GetUsageSummary(c.Request.Context(), apiKeyID, from, to)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to fetch usage summary"}})
+		return
+	}
+
+	recent, err := s.Store.ListRecentUsage(c.Request.Context(), apiKeyID, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to fetch recent usage"}})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"api_key_id": apiKeyID,
+		"window": gin.H{
+			"from":  from,
+			"to":    to,
+			"hours": hours,
+		},
+		"summary": gin.H{
+			"request_count":       summary.RequestCount,
+			"prompt_tokens":       summary.PromptTokens,
+			"completion_tokens":   summary.CompletionTokens,
+			"total_tokens":        summary.TotalTokens,
+			"estimated_responses": summary.EstimatedCount,
+		},
+		"recent": recent,
+	})
 }

@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -35,7 +37,14 @@ type Settings struct {
 	RedisHost                 string
 	RedisPort                 int
 	RedisDB                   int
+	RedisUsername             string
+	RedisPassword             string
+	RedisKeyPrefix            string
 	ElasticsearchURL          string
+	ElasticsearchUsername     string
+	ElasticsearchPassword     string
+	ElasticsearchAPIKey       string
+	ElasticsearchInsecureTLS  bool
 	QdrantURL                 string
 	APIKeyHashPepper          string
 	RequestTimeoutSeconds     int
@@ -48,7 +57,7 @@ func Load() (Settings, error) {
 	cfg := Settings{
 		Host:                      getEnv("GATEWAY_HOST", "0.0.0.0"),
 		Port:                      getEnvInt("GATEWAY_PORT", 8080),
-		LiteLLMBaseURL:            getEnv("LITELLM_BASE_URL", "http://latitude:4000"),
+		LiteLLMBaseURL:            getEnv("LITELLM_BASE_URL", "http://latitude:11435"),
 		OllamaBaseURL:             getEnv("OLLAMA_BASE_URL", "http://promaxgb10-6116:11434"),
 		PostgresHost:              getEnv("POSTGRES_HOST", "latitude"),
 		PostgresPort:              getEnvInt("POSTGRES_PORT", 5432),
@@ -58,7 +67,14 @@ func Load() (Settings, error) {
 		RedisHost:                 getEnv("REDIS_HOST", "latitude"),
 		RedisPort:                 getEnvInt("REDIS_PORT", 6379),
 		RedisDB:                   getEnvInt("REDIS_DB", 0),
+		RedisUsername:             getEnv("REDIS_USERNAME", ""),
+		RedisPassword:             getEnv("REDIS_PASSWORD", ""),
+		RedisKeyPrefix:            getEnv("REDIS_KEY_PREFIX", "openedai"),
 		ElasticsearchURL:          getEnv("ELASTICSEARCH_URL", "http://latitude:9200"),
+		ElasticsearchUsername:     getEnv("ELASTICSEARCH_USERNAME", ""),
+		ElasticsearchPassword:     getEnv("ELASTICSEARCH_PASSWORD", ""),
+		ElasticsearchAPIKey:       getEnv("ELASTICSEARCH_API_KEY", ""),
+		ElasticsearchInsecureTLS:  getEnvBool("ELASTICSEARCH_INSECURE_SKIP_VERIFY", false),
 		QdrantURL:                 getEnv("QDRANT_URL", "http://promaxgb10-6116:6333"),
 		APIKeyHashPepper:          getEnv("API_KEY_HASH_PEPPER", "change-this-pepper"),
 		RequestTimeoutSeconds:     getEnvInt("REQUEST_TIMEOUT_SECONDS", 120),
@@ -67,6 +83,13 @@ func Load() (Settings, error) {
 
 	if cfg.APIKeyHashPepper == "" {
 		return Settings{}, fmt.Errorf("API_KEY_HASH_PEPPER is required")
+	}
+
+	if cfg.ElasticsearchUsername == "" {
+		cfg.ElasticsearchUsername = getEnv("KIBANA_USERNAME", "")
+	}
+	if cfg.ElasticsearchPassword == "" {
+		cfg.ElasticsearchPassword = getEnv("KIBANA_PASSWORD", "")
 	}
 
 	return cfg, nil
@@ -88,14 +111,49 @@ func (s Settings) RedisAddr() string {
 }
 
 func (s Settings) ServiceDiscovery() map[string]ServiceEndpoint {
+	litellmHost, litellmPort, litellmScheme := parseBaseURL(s.LiteLLMBaseURL, "latitude", 11435, "http")
+	ollamaHost, ollamaPort, ollamaScheme := parseBaseURL(s.OllamaBaseURL, "promaxgb10-6116", 11434, "http")
+	elasticHost, elasticPort, elasticScheme := parseBaseURL(s.ElasticsearchURL, "latitude", 9200, "http")
+	qdrantHost, qdrantPort, qdrantScheme := parseBaseURL(s.QdrantURL, "promaxgb10-6116", 6333, "http")
+
 	return map[string]ServiceEndpoint{
-		"ollama":        {Name: "ollama", Host: "promaxgb10-6116", Port: 11434, Scheme: "http"},
-		"litellm":       {Name: "litellm", Host: "latitude", Port: 4000, Scheme: "http"},
+		"ollama":        {Name: "ollama", Host: ollamaHost, Port: ollamaPort, Scheme: ollamaScheme},
+		"litellm":       {Name: "litellm", Host: litellmHost, Port: litellmPort, Scheme: litellmScheme},
 		"postgres":      {Name: "postgres", Host: "latitude", Port: 5432, Scheme: "tcp"},
 		"redis":         {Name: "redis", Host: "latitude", Port: 6379, Scheme: "tcp"},
-		"elasticsearch": {Name: "elasticsearch", Host: "latitude", Port: 9200, Scheme: "http"},
-		"qdrant":        {Name: "qdrant", Host: "promaxgb10-6116", Port: 6333, Scheme: "http"},
+		"elasticsearch": {Name: "elasticsearch", Host: elasticHost, Port: elasticPort, Scheme: elasticScheme},
+		"qdrant":        {Name: "qdrant", Host: qdrantHost, Port: qdrantPort, Scheme: qdrantScheme},
 	}
+}
+
+func parseBaseURL(raw string, fallbackHost string, fallbackPort int, fallbackScheme string) (string, int, string) {
+	if raw == "" {
+		return fallbackHost, fallbackPort, fallbackScheme
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fallbackHost, fallbackPort, fallbackScheme
+	}
+
+	host := u.Hostname()
+	if host == "" {
+		host = fallbackHost
+	}
+
+	scheme := strings.ToLower(u.Scheme)
+	if scheme == "" {
+		scheme = fallbackScheme
+	}
+
+	port := fallbackPort
+	if p := u.Port(); p != "" {
+		if n, err := strconv.Atoi(p); err == nil {
+			port = n
+		}
+	}
+
+	return host, port, scheme
 }
 
 func getEnv(key, fallback string) string {
@@ -116,4 +174,19 @@ func getEnvInt(key string, fallback int) int {
 		return fallback
 	}
 	return n
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if v == "" {
+		return fallback
+	}
+	switch v {
+	case "1", "true", "yes", "y", "on":
+		return true
+	case "0", "false", "no", "n", "off":
+		return false
+	default:
+		return fallback
+	}
 }

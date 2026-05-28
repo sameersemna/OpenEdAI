@@ -10,6 +10,10 @@ import (
 )
 
 func RateLimitMiddleware(redisClient *redis.Client, defaultLimit int) gin.HandlerFunc {
+	return RateLimitMiddlewareWithPrefix(redisClient, defaultLimit, "openedai")
+}
+
+func RateLimitMiddlewareWithPrefix(redisClient *redis.Client, defaultLimit int, keyPrefix string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := GetAPIKeyFromContext(c)
 		if apiKey == nil {
@@ -23,7 +27,7 @@ func RateLimitMiddleware(redisClient *redis.Client, defaultLimit int) gin.Handle
 		}
 
 		window := time.Now().UTC().Format("200601021504")
-		redisKey := fmt.Sprintf("rate_limit:%s:%s", apiKey.ID, window)
+		redisKey := fmt.Sprintf("%s:rate_limit:%s:%s", keyPrefix, apiKey.ID, window)
 
 		count, err := redisClient.Incr(c.Request.Context(), redisKey).Result()
 		if err != nil {

@@ -33,6 +33,8 @@ func main() {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     cfg.RedisAddr(),
+		Username: cfg.RedisUsername,
+		Password: cfg.RedisPassword,
 		DB:       cfg.RedisDB,
 		PoolSize: 50,
 	})
@@ -42,12 +44,19 @@ func main() {
 	defer redisClient.Close()
 
 	srv := &api.Server{
-		Cfg:           cfg,
-		Store:         store,
-		RedisClient:   redisClient,
-		LiteLLM:       services.NewLiteLLMClient(cfg.LiteLLMBaseURL, cfg.RequestTimeoutSeconds),
-		Elasticsearch: services.NewElasticsearchClient(cfg.ElasticsearchURL, cfg.RequestTimeoutSeconds),
-		Qdrant:        services.NewQdrantClient(cfg.QdrantURL, cfg.RequestTimeoutSeconds),
+		Cfg:         cfg,
+		Store:       store,
+		RedisClient: redisClient,
+		LiteLLM:     services.NewLiteLLMClient(cfg.LiteLLMBaseURL, cfg.RequestTimeoutSeconds),
+		Elasticsearch: services.NewElasticsearchClient(
+			cfg.ElasticsearchURL,
+			cfg.RequestTimeoutSeconds,
+			cfg.ElasticsearchUsername,
+			cfg.ElasticsearchPassword,
+			cfg.ElasticsearchAPIKey,
+			cfg.ElasticsearchInsecureTLS,
+		),
+		Qdrant: services.NewQdrantClient(cfg.QdrantURL, cfg.RequestTimeoutSeconds),
 	}
 
 	router := srv.Router()

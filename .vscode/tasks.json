@@ -1,0 +1,113 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Rebuild and restart gateway service",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && go build -o openedai-gateway ./cmd/gateway && systemctl --user restart openedai-gateway.service && systemctl --user is-active openedai-gateway.service",
+			"isBackground": false
+		},
+		{
+			"label": "Rebuild and restart gateway service",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && gofmt -w ./cmd ./internal && go build -o openedai-gateway ./cmd/gateway && systemctl --user restart openedai-gateway.service && systemctl --user is-active openedai-gateway.service",
+			"isBackground": false
+		},
+		{
+			"label": "Validate gateway auth behavior",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && set -a && source .env && set +a && echo 'INVALID:' && curl -sS -o /tmp/invalid.json -w '%{http_code}\\n' -H 'Authorization: Bearer sk-lan-invalid' -H 'Content-Type: application/json' -d '{\"model\":\"qwen2.5-coder:32b\",\"prompt\":\"hello\"}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/completions\" && cat /tmp/invalid.json && echo && echo 'VALID:' && curl -sS -o /tmp/valid.json -w '%{http_code}\\n' -H 'Authorization: Bearer sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' -H 'Content-Type: application/json' -d '{\"model\":\"qwen2.5-coder:32b\",\"prompt\":\"hello\"}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/completions\" && cat /tmp/valid.json",
+			"isBackground": false
+		},
+		{
+			"label": "Build and restart gateway",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && gofmt -w ./cmd ./internal && go build -o openedai-gateway ./cmd/gateway && systemctl --user restart openedai-gateway.service && systemctl --user is-active openedai-gateway.service",
+			"isBackground": false
+		},
+		{
+			"label": "Validate management endpoints",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && set -a && source .env && set +a && KEY='sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' && echo 'HEALTH:' && curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/healthz\" && echo && echo 'API_KEYS:' && curl -sS -H \"Authorization: Bearer ${KEY}\" \"http://127.0.0.1:${GATEWAY_PORT}/v1/management/api-keys?limit=5\" && echo && echo 'USAGE:' && curl -sS -H \"Authorization: Bearer ${KEY}\" \"http://127.0.0.1:${GATEWAY_PORT}/v1/management/usage?hours=24&limit=5\"",
+			"isBackground": false
+		},
+		{
+			"label": "Check LiteLLM upstream ports",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && set -a && source .env && set +a && echo \"Configured LITELLM_BASE_URL=$LITELLM_BASE_URL\" && echo '--- Probe :4000' && curl -sS -m 3 -o /tmp/lit4000.out -w '%{http_code}\\n' http://latitude:4000/health || true && cat /tmp/lit4000.out 2>/dev/null || true && echo && echo '--- Probe :11435' && curl -sS -m 3 -o /tmp/lit11435.out -w '%{http_code}\\n' http://latitude:11435/health || true && cat /tmp/lit11435.out 2>/dev/null || true && echo && echo '--- TCP checks' && nc -z -w 2 latitude 4000 && echo '4000 open' || echo '4000 closed' && nc -z -w 2 latitude 11435 && echo '11435 open' || echo '11435 closed'",
+			"isBackground": false
+		},
+		{
+			"label": "Restart gateway and test LiteLLM path",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && systemctl --user restart openedai-gateway.service && set -a && source .env && set +a && KEY='sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' && echo 'Gateway health:' && curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/healthz\" && echo && echo 'LiteLLM models (direct):' && curl -sS \"http://latitude:11435/v1/models\" | head -c 600 && echo && echo 'Proxy completion plain model:' && curl -sS -o /tmp/proxy_plain.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"model\":\"qwen2.5-coder:32b\",\"prompt\":\"Return one word: ok\"}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/completions\" && cat /tmp/proxy_plain.json && echo && echo 'Proxy completion ollama model:' && curl -sS -o /tmp/proxy_ollama.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"model\":\"ollama/qwen2.5-coder:32b\",\"prompt\":\"Return one word: ok\"}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/completions\" && cat /tmp/proxy_ollama.json",
+			"isBackground": false
+		},
+		{
+			"label": "Inspect gateway service failure",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && systemctl --user status openedai-gateway.service --no-pager -l && echo '--- recent logs ---' && journalctl --user -u openedai-gateway.service -n 80 --no-pager",
+			"isBackground": false
+		},
+		{
+			"label": "Run end-to-end proxy checks",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && set -a && source .env && set +a && KEY='sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' && for i in 1 2 3; do curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/healthz\" && break || sleep 1; done && echo && echo 'Direct LiteLLM model call:' && curl -sS -o /tmp/lit_direct.json -w '%{http_code}\\n' -H 'Content-Type: application/json' -d '{\"model\":\"ollama/qwen2.5-coder:32b\",\"prompt\":\"Return one word: ok\"}' 'http://latitude:11435/v1/completions' && cat /tmp/lit_direct.json && echo && echo 'Gateway model call:' && curl -sS -o /tmp/gw_call.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"model\":\"ollama/qwen2.5-coder:32b\",\"prompt\":\"Return one word: ok\"}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/completions\" && cat /tmp/gw_call.json && echo && echo 'Gateway usage summary:' && curl -sS -H \"Authorization: Bearer ${KEY}\" \"http://127.0.0.1:${GATEWAY_PORT}/v1/management/usage?hours=24&limit=5\"",
+			"isBackground": false
+		},
+		{
+			"label": "Rebuild and validate after LiteLLM port alignment",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && gofmt -w ./cmd ./internal && go build -o openedai-gateway ./cmd/gateway && systemctl --user restart openedai-gateway.service && bash scripts/setup.sh && set -a && source .env && set +a && KEY='sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' && echo 'Health:' && curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/healthz\" && echo && echo 'Discovery:' && curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/discovery\" && echo && echo 'Proxy smoke test:' && curl -sS -o /tmp/gw_smoke.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"model\":\"ollama/qwen2.5-coder:32b\",\"prompt\":\"Return one word: ok\"}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/completions\" && cat /tmp/gw_smoke.json",
+			"isBackground": false
+		},
+		{
+			"label": "Recheck Elasticsearch and RAG flow",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && set -a && source .env && set +a && KEY='sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' && echo 'ES root:' && curl -sS -m 5 -o /tmp/es_root.json -w '%{http_code}\\n' \"$ELASTICSEARCH_URL\" && head -c 400 /tmp/es_root.json && echo && echo 'ES cluster health:' && curl -sS -m 5 -o /tmp/es_health.json -w '%{http_code}\\n' \"$ELASTICSEARCH_URL/_cluster/health\" && head -c 400 /tmp/es_health.json && echo && echo 'Gateway /healthz:' && curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/healthz\" && echo && echo 'RAG index through gateway:' && curl -sS -o /tmp/rag_index.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"index\":\"gateway-rag\",\"collection\":\"gateway-rag\",\"text\":\"Elasticsearch and Qdrant integration smoke test\",\"metadata\":{\"source\":\"smoke\"},\"vector\":[0.12,0.02,0.89,0.33]}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/rag/index\" && cat /tmp/rag_index.json && echo && echo 'RAG search through gateway:' && curl -sS -o /tmp/rag_search.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"index\":\"gateway-rag\",\"collection\":\"gateway-rag\",\"query\":\"integration smoke test\",\"vector\":[0.12,0.02,0.89,0.33],\"limit\":3}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/rag/search\" && cat /tmp/rag_search.json",
+			"isBackground": false
+		},
+		{
+			"label": "Diagnose Elasticsearch protocol",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && set -a && source .env && set +a && ES_HOST=$(echo \"$ELASTICSEARCH_URL\" | sed -E 's#^[a-zA-Z]+://([^:/]+).*$#\\1#') && echo \"Testing host=$ES_HOST\" && echo '--- HTTP root ---' && curl -sS -m 5 -o /tmp/es_http_root.out -w '%{http_code}\\n' \"http://${ES_HOST}:9200/\" || true && head -c 200 /tmp/es_http_root.out 2>/dev/null || true && echo && echo '--- HTTPS root (-k) ---' && curl -k -sS -m 5 -o /tmp/es_https_root.out -w '%{http_code}\\n' \"https://${ES_HOST}:9200/\" || true && head -c 300 /tmp/es_https_root.out 2>/dev/null || true && echo && echo '--- HTTPS cluster health (-k) ---' && curl -k -sS -m 5 -o /tmp/es_https_health.out -w '%{http_code}\\n' \"https://${ES_HOST}:9200/_cluster/health\" || true && head -c 300 /tmp/es_https_health.out 2>/dev/null || true && echo && echo '--- TLS handshake probe ---' && echo | openssl s_client -connect \"${ES_HOST}:9200\" -servername \"$ES_HOST\" 2>/dev/null | head -n 12",
+			"isBackground": false
+		},
+		{
+			"label": "Rebuild and verify secured ES settings",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && gofmt -w ./cmd ./internal && go build -o openedai-gateway ./cmd/gateway && systemctl --user restart openedai-gateway.service && bash scripts/setup.sh && set -a && source .env && set +a && KEY='sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' && echo 'Gateway health:' && curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/healthz\" && echo && echo 'RAG index test:' && curl -sS -o /tmp/rag_index_after_es.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"index\":\"gateway-rag\",\"collection\":\"gateway-rag\",\"text\":\"secure-es-check\",\"metadata\":{\"source\":\"secure-check\"},\"vector\":[0.3,0.1,0.7,0.2]}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/rag/index\" && cat /tmp/rag_index_after_es.json",
+			"isBackground": false
+		},
+		{
+			"label": "Retest RAG with ES auth fallback",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && gofmt -w ./cmd ./internal && go build -o openedai-gateway ./cmd/gateway && systemctl --user restart openedai-gateway.service && set -a && source .env && set +a && KEY='sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' && echo 'RAG index:' && curl -sS -o /tmp/rag_index_ok.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"index\":\"gateway-rag\",\"collection\":\"gateway-rag\",\"text\":\"secure-es-rag-pass\",\"metadata\":{\"source\":\"secure-check\"},\"vector\":[0.3,0.1,0.7,0.2]}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/rag/index\" && cat /tmp/rag_index_ok.json && echo && echo 'RAG search:' && curl -sS -o /tmp/rag_search_ok.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"index\":\"gateway-rag\",\"collection\":\"gateway-rag\",\"query\":\"secure-es-rag-pass\",\"vector\":[0.3,0.1,0.7,0.2],\"limit\":3}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/rag/search\" && cat /tmp/rag_search_ok.json",
+			"isBackground": false
+		},
+		{
+			"label": "Check service status after restart",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && systemctl --user status openedai-gateway.service --no-pager -l && echo '---' && journalctl --user -u openedai-gateway.service -n 40 --no-pager",
+			"isBackground": false
+		},
+		{
+			"label": "RAG test after service up",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && set -a && source .env && set +a && KEY='sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' && for i in 1 2 3 4 5; do curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/healthz\" >/dev/null && break || sleep 1; done && echo 'RAG index:' && curl -sS -o /tmp/rag_idx2.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"index\":\"gateway-rag\",\"collection\":\"gateway-rag\",\"text\":\"secure-es-rag-pass\",\"metadata\":{\"source\":\"secure-check\"},\"vector\":[0.3,0.1,0.7,0.2]}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/rag/index\" && cat /tmp/rag_idx2.json && echo && echo 'RAG search:' && curl -sS -o /tmp/rag_s2.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"index\":\"gateway-rag\",\"collection\":\"gateway-rag\",\"query\":\"secure-es-rag-pass\",\"vector\":[0.3,0.1,0.7,0.2],\"limit\":3}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/rag/search\" && cat /tmp/rag_s2.json",
+			"isBackground": false
+		},
+		{
+			"label": "Rebuild and retest RAG bootstrap",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && gofmt -w ./cmd ./internal && go build -o openedai-gateway ./cmd/gateway && systemctl --user restart openedai-gateway.service && set -a && source .env && set +a && KEY='sk-lan-b0721252abdb7b40adf60b2fe73efecb107391bcad72f4ba755120b6589f3620' && for i in 1 2 3 4 5; do curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/healthz\" >/dev/null && break || sleep 1; done && echo 'RAG index:' && curl -sS -o /tmp/rag_idx3.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"index\":\"gateway-rag\",\"collection\":\"gateway-rag\",\"text\":\"secure-es-rag-pass\",\"metadata\":{\"source\":\"secure-check\"},\"vector\":[0.3,0.1,0.7,0.2]}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/rag/index\" && cat /tmp/rag_idx3.json && echo && echo 'RAG search:' && curl -sS -o /tmp/rag_s3.json -w '%{http_code}\\n' -H \"Authorization: Bearer ${KEY}\" -H 'Content-Type: application/json' -d '{\"index\":\"gateway-rag\",\"collection\":\"gateway-rag\",\"query\":\"secure-es-rag-pass\",\"vector\":[0.3,0.1,0.7,0.2],\"limit\":3}' \"http://127.0.0.1:${GATEWAY_PORT}/v1/rag/search\" && cat /tmp/rag_s3.json",
+			"isBackground": false
+		},
+		{
+			"label": "Build and validate healthz with ES check",
+			"type": "shell",
+			"command": "cd /home/sameer/Public/Shared/Work/Projects/OpenEdAI && gofmt -w ./cmd ./internal && go build -o openedai-gateway ./cmd/gateway && systemctl --user restart openedai-gateway.service && set -a && source .env && set +a && for i in 1 2 3 4 5; do curl -sS \"http://127.0.0.1:${GATEWAY_PORT}/healthz\" && break || sleep 1; done",
+			"isBackground": false
+		}
+	]
+}

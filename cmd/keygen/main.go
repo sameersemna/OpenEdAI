@@ -2,13 +2,13 @@ package main
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
 
 	"openedai-gateway/internal/config"
+	"openedai-gateway/internal/security"
 )
 
 func main() {
@@ -25,8 +25,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	hash := sha256.Sum256([]byte(cfg.APIKeyHashPepper + ":" + rawKey))
-	hashHex := hex.EncodeToString(hash[:])
+	hashHex := security.HashAPIKey(rawKey, cfg.APIKeyHashPepper)
 
 	fmt.Println("Provide this key to clients (shown once):")
 	fmt.Printf("  sk-lan-%s\n", rawKey)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,6 +23,36 @@ func NewLiteLLMClient(baseURL string, timeoutSeconds int) *LiteLLMClient {
 		BaseURL: baseURL,
 		Client:  &http.Client{Timeout: time.Duration(timeoutSeconds) * time.Second},
 	}
+}
+
+func (c *LiteLLMClient) Health(ctx context.Context) error {
+	paths := []string{"/health", "/v1/models"}
+	var lastErr error
+
+	for _, path := range paths {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s%s", c.BaseURL, path), nil)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		resp, err := c.Client.Do(req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		resp.Body.Close()
+
+		if resp.StatusCode < http.StatusInternalServerError {
+			return nil
+		}
+		lastErr = fmt.Errorf("litellm %s returned status %d", path, resp.StatusCode)
+	}
+
+	if lastErr == nil {
+		lastErr = errors.New("litellm health probe failed")
+	}
+	return lastErr
 }
 
 func (c *LiteLLMClient) Proxy(ctx context.Context, path string, body []byte, headers http.Header) (int, []byte, *models.OpenAIUsage, string, error) {

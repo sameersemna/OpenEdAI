@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenEdAI Gateway (Go) - User Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Public/Shared/Work/Projects/OpenEdAI
+EnvironmentFile=%h/Public/Shared/Work/Projects/OpenEdAI/.env
+ExecStart=%h/Public/Shared/Work/Projects/OpenEdAI/openedai-gateway
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=default.target
