@@ -35,13 +35,14 @@ type Server struct {
 
 func (s *Server) Router() *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Logger(), gin.Recovery())
+	r.Use(gin.Recovery())
 
 	r.GET("/healthz", s.health)
 	r.GET("/livez", s.live)
 	r.GET("/discovery", s.discovery)
 
 	v1 := r.Group("/v1")
+	v1.Use(middleware.JournaldRequestLogMiddleware())
 	v1.Use(middleware.AuthMiddleware(s.Store, s.Cfg.APIKeyHashPepper))
 	v1.Use(middleware.RateLimitMiddlewareWithPrefix(s.RedisClient, s.Cfg.DefaultRateLimitPerMinute, s.Cfg.RedisKeyPrefix))
 
@@ -106,6 +107,9 @@ func (s *Server) proxyOpenAI(c *gin.Context, path string) {
 	statusCode, respBody, usage, model, err := s.LiteLLM.Proxy(c.Request.Context(), path, body, c.Request.Header)
 	latencyMS := time.Since(start).Milliseconds()
 	if err != nil {
+		middleware.SetRequestLogMetrics(c, middleware.RequestLogMetrics{
+			UpstreamLatencyMS: latencyMS,
+		})
 		c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"message": "Upstream LiteLLM unavailable"}})
 		return
 	}
@@ -124,6 +128,11 @@ func (s *Server) proxyOpenAI(c *gin.Context, path string) {
 			estimated = true
 		}
 
+		middleware.SetRequestLogMetrics(c, middleware.RequestLogMetrics{
+			UpstreamLatencyMS: latencyMS,
+			TokensUsed:        usage.TotalTokens,
+		})
+
 		_ = s.Store.TouchAPIKeyLastUsed(c.Request.Context(), apiKey.ID)
 		_ = s.Store.InsertUsageLog(c.Request.Context(), models.UsageLog{
 			ID:               uuid.NewString(),
@@ -140,9 +149,23 @@ func (s *Server) proxyOpenAI(c *gin.Context, path string) {
 		})
 	}
 
+	if statusCode < 200 || statusCode >= 300 {
+		middleware.SetRequestLogMetrics(c, middleware.RequestLogMetrics{
+			UpstreamLatencyMS: latencyMS,
+			TokensUsed:        totalTokens(usage),
+		})
+	}
+
 	c.Header("Content-Type", "application/json")
 	c.Header("X-Request-ID", requestID)
 	c.Data(statusCode, "application/json", respBody)
+}
+
+func totalTokens(usage *models.OpenAIUsage) int {
+	if usage == nil {
+		return 0
+	}
+	return usage.TotalTokens
 }
 
 type ragIndexRequest struct {
