@@ -67,6 +67,11 @@ func main() {
 	}
 
 	go func() {
+		log.Printf(
+			"health policy: degraded_latency_ms=%d critical_dependencies=%v",
+			cfg.ResolvedHealthDegradedLatencyMS(),
+			cfg.ResolvedHealthCriticalDependencies(),
+		)
 		log.Printf("gateway listening on %s", httpServer.Addr)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen error: %v", err)

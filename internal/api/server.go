@@ -28,6 +28,9 @@ type Server struct {
 	LiteLLM       *services.LiteLLMClient
 	Elasticsearch *services.ElasticsearchClient
 	Qdrant        *services.QdrantClient
+
+	healthProbesOverride map[string]healthProbe
+	hostMetricsOverride  func(context.Context) HostMetrics
 }
 
 func (s *Server) Router() *gin.Engine {
@@ -35,6 +38,7 @@ func (s *Server) Router() *gin.Engine {
 	r.Use(gin.Logger(), gin.Recovery())
 
 	r.GET("/healthz", s.health)
+	r.GET("/livez", s.live)
 	r.GET("/discovery", s.discovery)
 
 	v1 := r.Group("/v1")
@@ -68,40 +72,6 @@ func (s *Server) Router() *gin.Engine {
 	}
 
 	return r
-}
-func (s *Server) health(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
-	defer cancel()
-
-	dbStatus := "ok"
-	if err := s.Store.Pool.Ping(ctx); err != nil {
-		dbStatus = "down"
-	}
-
-	redisStatus := "ok"
-	if err := s.RedisClient.Ping(ctx).Err(); err != nil {
-		redisStatus = "down"
-	}
-
-	litellmStatus := "ok"
-	if err := s.LiteLLM.Health(ctx); err != nil {
-		litellmStatus = "down"
-	}
-
-	elasticsearchStatus := "ok"
-	if err := s.Elasticsearch.Health(ctx); err != nil {
-		elasticsearchStatus = "down"
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"status": "ok",
-		"checks": gin.H{
-			"postgres":      dbStatus,
-			"redis":         redisStatus,
-			"litellm":       litellmStatus,
-			"elasticsearch": elasticsearchStatus,
-		},
-	})
 }
 
 func (s *Server) discovery(c *gin.Context) {

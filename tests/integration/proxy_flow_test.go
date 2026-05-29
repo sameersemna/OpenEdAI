@@ -64,7 +64,7 @@ func TestProxyFlowWithSplitKey(t *testing.T) {
 		}`)
 		status, raw := doJSONRequest(t, "POST", baseURL+"/v1/chat/completions", splitKey, body)
 		if status == http.StatusBadGateway {
-			t.Skip("LiteLLM upstream unavailable (expected in test environment)")
+			backendUnavailable(t, "LiteLLM upstream unavailable")
 		}
 		if status == http.StatusBadRequest {
 			var errResp map[string]any
@@ -90,7 +90,7 @@ func TestProxyFlowWithSplitKey(t *testing.T) {
 		}`)
 		status, raw := doJSONRequest(t, "POST", baseURL+"/v1/completions", splitKey, body)
 		if status == http.StatusBadGateway {
-			t.Skip("LiteLLM upstream unavailable (expected in test environment)")
+			backendUnavailable(t, "LiteLLM upstream unavailable")
 		}
 		if status == http.StatusBadRequest {
 			var errResp map[string]any

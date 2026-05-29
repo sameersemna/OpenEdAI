@@ -1,0 +1,45 @@
+name: Health Contract
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      run_strict_backends:
+        description: "Run strict backend integration checks"
+        required: false
+        default: "false"
+
+jobs:
+  health-contract-fast:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run fast CI health contract checks
+        run: make test-ci-fast
+
+  health-contract-strict:
+    if: ${{ vars.RUN_STRICT_BACKEND_TESTS == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_strict_backends == 'true') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run strict integration checks
+        run: make test-ci-strict

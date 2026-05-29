@@ -209,7 +209,7 @@ func waitForGateway(baseURL string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	client := &http.Client{Timeout: 3 * time.Second}
 	for time.Now().Before(deadline) {
-		resp, err := client.Get(baseURL + "/healthz")
+		resp, err := client.Get(baseURL + "/livez")
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
@@ -218,7 +218,7 @@ func waitForGateway(baseURL string, timeout time.Duration) error {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	return fmt.Errorf("healthz did not return 200 within %s", timeout)
+	return fmt.Errorf("livez did not return 200 within %s", timeout)
 }
 
 func gatewayBaseURL() string {

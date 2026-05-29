@@ -1,0 +1,61 @@
+name: Governance Policy Self-Test
+
+on:
+  schedule:
+    - cron: "45 2 * * 1"
+  workflow_dispatch:
+
+jobs:
+  governance-policy-selftest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run governance policy self-test
+        run: |
+          mkdir -p artifacts
+          set -o pipefail
+          make report-policy-selftest | tee artifacts/policy-selftest.log
+
+      - name: Collect governance policy artifacts
+        if: ${{ always() }}
+        run: |
+          mkdir -p artifacts
+          if make report-policy-overview-json > artifacts/policy-overview.json 2>/tmp/openedai_governance_artifact_err.log; then
+            :
+          else
+            printf '{"error":"command_failed","command":"make report-policy-overview-json"}\n' > artifacts/policy-overview.json
+          fi
+          bash scripts/ci/workflow_artifact_manifest.sh selftest artifacts
+
+      - name: Generate governance policy artifact checksums
+        if: ${{ always() }}
+        run: |
+          (
+            cd artifacts
+            find . -maxdepth 1 -type f ! -name 'sha256sums.txt' -printf '%f\n' \
+              | LC_ALL=C sort \
+              | while IFS= read -r f; do
+                  sha256sum "$f"
+                done > sha256sums.txt
+          )
+
+      - name: Verify governance artifact bundle
+        if: ${{ always() }}
+        run: make verify-governance-artifacts ARTIFACT_DIR=artifacts BUNDLE_MODE=selftest
+
+      - name: Upload governance policy artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-policy-selftest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14

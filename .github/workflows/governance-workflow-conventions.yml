@@ -1,0 +1,35 @@
+name: Governance Workflow Conventions
+
+on:
+  schedule:
+    - cron: "15 3 * * 1"
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - scripts/ci/**
+      - Makefile
+  workflow_dispatch:
+
+jobs:
+  verify-governance-workflow-conventions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify governance workflow conventions
+        run: make verify-workflow-conventions
+
+      - name: Run governance policy self-test
+        run: make report-policy-selftest
+
+  verify-governance-artifacts-selftest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run governance artifact verifier self-test
+        run: make verify-governance-artifacts-selftest

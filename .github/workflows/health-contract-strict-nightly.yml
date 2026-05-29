@@ -1,0 +1,25 @@
+name: Health Contract Strict Nightly
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  strict-nightly:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Focused health contract checks
+        run: make test-health-contract
+
+      - name: Strict backend integration checks
+        run: make test-ci-strict

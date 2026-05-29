@@ -1,4 +1,6 @@
 bin/
+/gateway
+/openedai-gateway
 *.db
 *.db-wal
 *.db-shm

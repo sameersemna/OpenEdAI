@@ -1,0 +1,160 @@
+name: Local Smoke Report Guard Auth
+
+on:
+  workflow_dispatch:
+    inputs:
+      trend_limit:
+        description: Trend window size for policy checks
+        required: false
+        default: '5'
+      max_fail:
+        description: Maximum allowed failed reports in trend window
+        required: false
+        default: '0'
+      max_unknown:
+        description: Maximum allowed unknown reports in trend window
+        required: false
+        default: '0'
+      min_pass_rate:
+        description: Minimum pass rate percentage for trend policy
+        required: false
+        default: '100'
+      max_standard_total:
+        description: Maximum allowed standard smoke report count
+        required: false
+        default: '200'
+      max_auth_total:
+        description: Maximum allowed auth smoke report count
+        required: false
+        default: '200'
+      max_standard_age_days:
+        description: Maximum standard report age in days (-1 disables)
+        required: false
+        default: '-1'
+      max_auth_age_days:
+        description: Maximum auth report age in days (-1 disables)
+        required: false
+        default: '-1'
+      dashboard_lean:
+        description: Emit lean dashboard JSON without duplicated top-level prune data
+        required: false
+        default: 'false'
+      run_policy_selftest:
+        description: Run governance policy self-test after smoke reporting completes
+        required: false
+        default: 'false'
+
+jobs:
+  local-smoke-guard-auth:
+    runs-on: self-hosted
+    env:
+      GATEWAY_TEST_API_KEY: ${{ secrets.GATEWAY_TEST_API_KEY }}
+      TREND_LIMIT: ${{ github.event.inputs.trend_limit || '5' }}
+      MAX_FAIL: ${{ github.event.inputs.max_fail || '0' }}
+      MAX_UNKNOWN: ${{ github.event.inputs.max_unknown || '0' }}
+      MIN_PASS_RATE: ${{ github.event.inputs.min_pass_rate || '100' }}
+      MAX_STANDARD_TOTAL: ${{ github.event.inputs.max_standard_total || '200' }}
+      MAX_AUTH_TOTAL: ${{ github.event.inputs.max_auth_total || '200' }}
+      MAX_STANDARD_AGE_DAYS: ${{ github.event.inputs.max_standard_age_days || '-1' }}
+      MAX_AUTH_AGE_DAYS: ${{ github.event.inputs.max_auth_age_days || '-1' }}
+      DASHBOARD_LEAN: ${{ github.event.inputs.dashboard_lean == 'true' && '1' || '0' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Validate required auth key
+        run: |
+          if [[ -z "${GATEWAY_TEST_API_KEY:-}" ]]; then
+            echo "GATEWAY_TEST_API_KEY is required for auth smoke guard workflow"
+            echo "Set repository secret GATEWAY_TEST_API_KEY before dispatching this workflow"
+            exit 1
+          fi
+
+      - name: Generate baseline auth smoke report
+        run: make report-generate-local-smoke-auth
+
+      - name: Wait for unique timestamp
+        run: sleep 1
+
+      - name: Generate current auth smoke report
+        run: make report-generate-local-smoke-auth
+
+      - name: Enforce auth report guard
+        run: make report-guard-auth
+
+      - name: Show combined guard JSON
+        run: |
+          make report-trend-last-json
+          make report-trend-assert
+          make report-guard-all-assert EXPECTED_OVERALL=PASS EXPECTED_AUTH_MODE=ENFORCED
+          make report-guard-all-json
+          make report-policy-overview-json
+          if [[ "${DASHBOARD_LEAN}" == "1" ]]; then
+            make report-health-dashboard-json-lean
+          else
+            make report-health-dashboard-json
+          fi
+          DRY_RUN=1 make report-prune
+          make report-prune-assert
+
+      - name: Run governance policy self-test
+        if: ${{ github.event.inputs.run_policy_selftest == 'true' }}
+        run: make report-policy-selftest
+
+      - name: Collect governance artifacts
+        if: ${{ always() }}
+        run: |
+          mkdir -p artifacts
+
+          capture_json() {
+            local outfile="$1"
+            shift
+            if "$@" >"${outfile}" 2>/tmp/openedai_artifact_err.log; then
+              return 0
+            fi
+            printf '{"error":"command_failed","command":"%s"}\n' "$*" >"${outfile}"
+          }
+
+          capture_json artifacts/latest-summary.json make report-latest-summary-json
+          capture_json artifacts/latest-drift.json make report-compare-latest-json
+          capture_json artifacts/trend.json make report-trend-last-json
+          capture_json artifacts/combined-guard.json make report-guard-all-json
+          capture_json artifacts/policy-overview.json make report-policy-overview-json
+          if [[ "${DASHBOARD_LEAN}" == "1" ]]; then
+            capture_json artifacts/dashboard.json make report-health-dashboard-json-lean
+          else
+            capture_json artifacts/dashboard.json make report-health-dashboard-json
+          fi
+          capture_json artifacts/prune-policy.json make report-prune-assert-json
+          bash scripts/ci/workflow_artifact_manifest.sh smoke artifacts
+
+      - name: Generate governance artifact checksums
+        if: ${{ always() }}
+        run: |
+          (
+            cd artifacts
+            find . -maxdepth 1 -type f ! -name 'sha256sums.txt' -printf '%f\n' \
+              | LC_ALL=C sort \
+              | while IFS= read -r f; do
+                  sha256sum "$f"
+                done > sha256sums.txt
+          )
+
+      - name: Verify governance artifact bundle
+        if: ${{ always() }}
+        run: make verify-governance-artifacts ARTIFACT_DIR=artifacts BUNDLE_MODE=smoke
+
+      - name: Upload governance artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-smoke-auth-governance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14

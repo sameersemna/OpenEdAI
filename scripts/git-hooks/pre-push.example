@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+echo "[pre-push] Running fast CI parity checks..."
+make test-ci-fast
+
+echo "[pre-push] Checks passed."

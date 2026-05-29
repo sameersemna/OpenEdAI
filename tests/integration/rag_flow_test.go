@@ -73,11 +73,11 @@ func TestRAGFlowWithSplitKey(t *testing.T) {
 			if err := json.Unmarshal(raw, &errResp); err == nil {
 				if errMap, ok := errResp["error"].(map[string]any); ok {
 					if msg, ok := errMap["message"].(string); ok && msg != "" {
-						t.Skipf("RAG backend unavailable (expected in test environment): %s", msg)
+						backendUnavailable(t, "RAG backend unavailable: %s", msg)
 					}
 				}
 			}
-			t.Skipf("RAG backend unavailable: status=%d", status)
+			backendUnavailable(t, "RAG backend unavailable: status=%d", status)
 		}
 
 		if status != http.StatusOK {
@@ -104,7 +104,7 @@ func TestRAGFlowWithSplitKey(t *testing.T) {
 		status, raw := doJSONRequest(t, "POST", baseURL+"/v1/rag/search", splitKey, body)
 
 		if status == http.StatusBadGateway || status == http.StatusInternalServerError {
-			t.Skip("RAG backend unavailable (expected in test environment)")
+			backendUnavailable(t, "RAG backend unavailable")
 		}
 
 		if status != http.StatusOK {
