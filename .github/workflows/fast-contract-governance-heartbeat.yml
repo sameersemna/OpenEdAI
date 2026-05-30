@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
+    inputs:
+      run_strict_local_checks:
+        description: "Run strict-local contract checks (requires reachable backends)"
+        required: false
+        default: "false"
 
 jobs:
   fast-contract-governance-heartbeat:
@@ -29,3 +34,7 @@ jobs:
 
       - name: Validate fast contract artifact verifier behavior
         run: make fast-contract-artifacts-verify-selftest
+
+      - name: Run strict-local checks (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_strict_local_checks == 'true' }}
+        run: make test-ci-fast-contracts-strict-local

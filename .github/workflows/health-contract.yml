@@ -85,8 +85,14 @@ jobs:
       - name: Assert fast contract trend thresholds
         run: make fast-contract-trend-assert FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_MAX_FAIL=0 FAST_CONTRACT_MAX_UNKNOWN=0 FAST_CONTRACT_MIN_PASS_RATE=100
 
+      - name: Generate fast contract gate verdict JSON
+        run: make fast-contract-gate-verdict FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json FAST_CONTRACT_MAX_FAIL=0 FAST_CONTRACT_MAX_UNKNOWN=0 FAST_CONTRACT_MIN_PASS_RATE=100
+
       - name: Validate fast contract trend validator behavior
         run: make fast-contract-trend-validate-selftest
+
+      - name: Validate fast contract gate verdict behavior
+        run: make fast-contract-gate-verdict-selftest
 
       - name: Validate fast contract artifact verifier behavior
         run: make fast-contract-artifacts-verify-selftest
@@ -108,6 +114,7 @@ jobs:
             artifacts/contracts/contract-env-status.json
             artifacts/contracts/fast-contract-status-summary.json
             artifacts/contracts/fast-contract-trend.json
+            artifacts/contracts/fast-contract-gate-verdict.json
           if-no-files-found: error
           retention-days: 14
 
@@ -119,6 +126,10 @@ jobs:
             echo "- Contract environment status JSON: artifacts/contracts/contract-env-status.json"
             echo "- Fast contract status summary JSON: artifacts/contracts/fast-contract-status-summary.json"
             echo "- Fast contract trend JSON: artifacts/contracts/fast-contract-trend.json"
+            echo "- Fast contract gate verdict JSON: artifacts/contracts/fast-contract-gate-verdict.json"
+            verdict_overall="$$(python3 -c "import json;print(json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8')).get('overall', 'UNKNOWN'))")"
+            verdict_reasons="$$(python3 -c "import json;d=json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8'));r=d.get('reason_codes', []);print(','.join(r) if r else 'none')")"
+            echo "- Verdict: $${verdict_overall} ($${verdict_reasons})"
             echo
             echo "### Contract Environment Status"
             echo '```json'
@@ -133,6 +144,11 @@ jobs:
             echo "### Fast Contract Trend"
             echo '```json'
             cat artifacts/contracts/fast-contract-trend.json
+            echo '```'
+            echo
+            echo "### Fast Contract Verdict"
+            echo '```json'
+            cat artifacts/contracts/fast-contract-gate-verdict.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

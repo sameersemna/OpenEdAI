@@ -22,6 +22,7 @@ SMOKE_WORKFLOWS = {
 HELPER = Path('scripts/ci/workflow_artifact_manifest.sh')
 GOVERNANCE_CONVENTIONS_WORKFLOW = Path('.github/workflows/governance-workflow-conventions.yml')
 HEALTH_CONTRACT_WORKFLOW = Path('.github/workflows/health-contract.yml')
+FAST_CONTRACT_HEARTBEAT_WORKFLOW = Path('.github/workflows/fast-contract-governance-heartbeat.yml')
 FAST_CONTRACT_REQUIRED_ORDER = [
     'Capture contract environment status JSON',
     'Validate contract environment status JSON artifact',
@@ -35,7 +36,9 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Generate fast contract trend JSON',
     'Validate fast contract trend JSON',
     'Assert fast contract trend thresholds',
+    'Generate fast contract gate verdict JSON',
     'Validate fast contract trend validator behavior',
+    'Validate fast contract gate verdict behavior',
     'Validate fast contract artifact verifier behavior',
     'Verify fast contract artifacts before upload',
     'Upload fast contract report artifact',
@@ -192,10 +195,20 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract trend threshold assertion OK')
 
+            if 'make fast-contract-gate-verdict' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract gate verdict generation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract gate verdict generation OK')
+
             if 'make fast-contract-trend-validate-selftest' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract trend validator selftest step')
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract trend validator selftest OK')
+
+            if 'make fast-contract-gate-verdict-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract gate verdict selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract gate verdict selftest OK')
 
             if 'make fast-contract-artifacts-verify-selftest' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verifier selftest step')
@@ -206,6 +219,36 @@ else:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verification step')
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract artifact verification step OK')
+
+if not FAST_CONTRACT_HEARTBEAT_WORKFLOW.exists():
+    errors.append('.github/workflows/fast-contract-governance-heartbeat.yml: missing workflow file')
+else:
+    try:
+        heartbeat_data = yaml.load(FAST_CONTRACT_HEARTBEAT_WORKFLOW.read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
+    except Exception as exc:
+        errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: invalid yaml: {exc}')
+    else:
+        on_block = heartbeat_data.get('on', {}) if isinstance(heartbeat_data, dict) else {}
+        schedules = on_block.get('schedule', []) if isinstance(on_block, dict) else []
+        if schedules:
+            checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: weekly schedule OK')
+        else:
+            errors.append('.github/workflows/fast-contract-governance-heartbeat.yml: missing schedule trigger')
+
+        jobs = heartbeat_data.get('jobs', {}) if isinstance(heartbeat_data, dict) else {}
+        heartbeat_job = jobs.get('fast-contract-governance-heartbeat', {}) if isinstance(jobs, dict) else {}
+        steps = heartbeat_job.get('steps', []) if isinstance(heartbeat_job, dict) else []
+        run_blocks = '\n'.join(str(step.get('run', '')) for step in steps if isinstance(step, dict))
+        for required in [
+            'make verify-workflow-conventions',
+            'make fast-contract-status-validate-selftest',
+            'make fast-contract-trend-validate-selftest',
+            'make fast-contract-artifacts-verify-selftest',
+        ]:
+            if required not in run_blocks:
+                errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: missing required run command "{required}"')
+            else:
+                checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required run command OK ({required})')
 
 if errors:
     print('[workflow-conventions][fail]')
