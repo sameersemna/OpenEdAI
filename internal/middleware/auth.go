@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"context"
 	"crypto/subtle"
 	"net/http"
 	"strings"
+	"time"
 
 	"openedai-gateway/internal/models"
 	"openedai-gateway/internal/security"
@@ -15,54 +17,48 @@ import (
 
 const APIKeyContextKey = "api_key"
 
+type apiKeyLoader func(ctx context.Context, id string) (*models.APIKey, error)
+
 func AuthMiddleware(store *storage.PostgresStore, pepper string) gin.HandlerFunc {
+	return authMiddlewareWithLookup(store.GetActiveAPIKeyByID, pepper)
+}
+
+func authMiddlewareWithLookup(loadByID apiKeyLoader, pepper string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authz := c.GetHeader("Authorization")
 		if authz == "" || !strings.HasPrefix(strings.ToLower(authz), "bearer ") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"message": "Missing Bearer token",
-					"type":    "invalid_request_error",
-				},
-			})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Missing Bearer token", "type": "invalid_request_error"}})
 			return
 		}
 
 		rawKey := strings.TrimSpace(authz[7:])
 		keyID, secret, err := security.ParseSplitAPIKey(rawKey)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"message": "Invalid API key",
-					"type":    "invalid_request_error",
-				},
-			})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Invalid API key", "type": "invalid_request_error"}})
 			return
 		}
 
-		apiKey, err := store.GetActiveAPIKeyByID(c.Request.Context(), keyID)
+		apiKey, err := loadByID(c.Request.Context(), keyID)
 		if err != nil {
-			status := http.StatusUnauthorized
 			if err != pgx.ErrNoRows {
-				status = http.StatusUnauthorized
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Invalid API key", "type": "invalid_request_error"}})
+				return
 			}
-			c.AbortWithStatusJSON(status, gin.H{
-				"error": gin.H{
-					"message": "Invalid API key",
-					"type":    "invalid_request_error",
-				},
-			})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Invalid API key", "type": "invalid_request_error"}})
+			return
+		}
+		if !apiKey.IsActive {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Invalid API key", "type": "invalid_request_error"}})
+			return
+		}
+		if apiKey.ExpiresAt != nil && apiKey.ExpiresAt.Before(time.Now().UTC()) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Invalid API key", "type": "invalid_request_error"}})
 			return
 		}
 
 		expectedHash := security.HashSecretToken(secret, pepper)
 		if subtle.ConstantTimeCompare([]byte(apiKey.KeyHash), []byte(expectedHash)) != 1 {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"message": "Invalid API key",
-					"type":    "invalid_request_error",
-				},
-			})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Invalid API key", "type": "invalid_request_error"}})
 			return
 		}
 
