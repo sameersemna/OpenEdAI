@@ -1,0 +1,31 @@
+name: Fast Contract Governance Heartbeat
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  fast-contract-governance-heartbeat:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Verify workflow conventions
+        run: make verify-workflow-conventions
+
+      - name: Validate fast contract status summary validator behavior
+        run: make fast-contract-status-validate-selftest
+
+      - name: Validate fast contract trend validator behavior
+        run: make fast-contract-trend-validate-selftest
+
+      - name: Validate fast contract artifact verifier behavior
+        run: make fast-contract-artifacts-verify-selftest

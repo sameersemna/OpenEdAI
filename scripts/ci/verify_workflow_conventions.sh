@@ -34,7 +34,9 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract status summary validator behavior',
     'Generate fast contract trend JSON',
     'Validate fast contract trend JSON',
+    'Assert fast contract trend thresholds',
     'Validate fast contract trend validator behavior',
+    'Validate fast contract artifact verifier behavior',
     'Verify fast contract artifacts before upload',
     'Upload fast contract report artifact',
     'Append fast contract summary',
@@ -185,10 +187,20 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract trend json validation OK')
 
+            if 'make fast-contract-trend-assert' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract trend threshold assertion step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract trend threshold assertion OK')
+
             if 'make fast-contract-trend-validate-selftest' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract trend validator selftest step')
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract trend validator selftest OK')
+
+            if 'make fast-contract-artifacts-verify-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verifier selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract artifact verifier selftest OK')
 
             if 'make fast-contract-artifacts-verify' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verification step')

@@ -82,8 +82,14 @@ jobs:
       - name: Validate fast contract trend JSON
         run: make fast-contract-trend-validate-json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json
 
+      - name: Assert fast contract trend thresholds
+        run: make fast-contract-trend-assert FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_MAX_FAIL=0 FAST_CONTRACT_MAX_UNKNOWN=0 FAST_CONTRACT_MIN_PASS_RATE=100
+
       - name: Validate fast contract trend validator behavior
         run: make fast-contract-trend-validate-selftest
+
+      - name: Validate fast contract artifact verifier behavior
+        run: make fast-contract-artifacts-verify-selftest
 
       - name: Verify fast contract artifacts before upload
         run: |
