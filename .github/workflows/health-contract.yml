@@ -139,6 +139,12 @@ jobs:
       - name: Validate fast contract consistency KPI JSON validator behavior
         run: make fast-contract-consistency-kpi-validate-selftest
 
+      - name: Assert fast contract consistency KPI thresholds
+        run: make fast-contract-consistency-kpi-assert FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json FAST_CONTRACT_EXPECTED_CONSISTENCY_PASS=1 FAST_CONTRACT_EXPECTED_GATE_PASS=1 FAST_CONTRACT_MAX_REASON_COUNT=0
+
+      - name: Validate fast contract consistency KPI assertor behavior
+        run: make fast-contract-consistency-kpi-assert-selftest
+
       - name: Verify fast contract artifacts before upload
         run: |
           make fast-contract-artifacts-verify \

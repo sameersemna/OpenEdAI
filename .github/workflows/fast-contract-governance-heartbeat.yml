@@ -53,6 +53,9 @@ jobs:
       - name: Validate fast contract consistency KPI JSON validator behavior
         run: make fast-contract-consistency-kpi-validate-selftest
 
+      - name: Validate fast contract consistency KPI assertor behavior
+        run: make fast-contract-consistency-kpi-assert-selftest
+
       - name: Validate fast contract gate manifest assertion behavior
         run: make fast-contract-gate-manifest-assert-selftest
 

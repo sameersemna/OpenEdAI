@@ -32,6 +32,8 @@
     "Generate fast contract consistency KPI JSON",
     "Validate fast contract consistency KPI JSON",
     "Validate fast contract consistency KPI JSON validator behavior",
+    "Assert fast contract consistency KPI thresholds",
+    "Validate fast contract consistency KPI assertor behavior",
     "Verify fast contract artifacts before upload",
     "Upload fast contract report artifact",
     "Append fast contract summary"
@@ -61,6 +63,8 @@
     "make fast-contract-consistency-kpi-json",
     "make fast-contract-consistency-kpi-validate-json",
     "make fast-contract-consistency-kpi-validate-selftest",
+    "make fast-contract-consistency-kpi-assert",
+    "make fast-contract-consistency-kpi-assert-selftest",
     "make fast-contract-artifacts-verify"
   ]
 }
