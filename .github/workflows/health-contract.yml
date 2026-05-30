@@ -172,8 +172,17 @@ jobs:
       - name: Validate fast contract gate verdict reason-code behavior
         run: make fast-contract-gate-verdict-reason-codes-selftest
 
+      - name: Validate fast contract policy fingerprint JSON validator behavior
+        run: make fast-contract-policy-fingerprint-validate-selftest
+
       - name: Assert fast contract artifact manifest path integrity
         run: make fast-contract-artifact-manifest-assert-paths FAST_CONTRACT_ARTIFACT_MANIFEST=artifacts/contracts/fast-contract-artifact-manifest.json FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7 FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=7
+
+      - name: Generate fast contract policy fingerprint JSON
+        run: make fast-contract-policy-fingerprint-json FAST_CONTRACT_ARTIFACT_MANIFEST=artifacts/contracts/fast-contract-artifact-manifest.json FAST_CONTRACT_POLICY_FINGERPRINT_JSON=artifacts/contracts/fast-contract-policy-fingerprint.json FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=7
+
+      - name: Validate fast contract policy fingerprint JSON
+        run: make fast-contract-policy-fingerprint-validate-json FAST_CONTRACT_POLICY_FINGERPRINT_JSON=artifacts/contracts/fast-contract-policy-fingerprint.json
 
       - name: Generate fast contract artifact checksums
         run: make fast-contract-checksums-generate FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json FAST_CONTRACT_CHECKSUMS=artifacts/contracts/sha256sums.txt FAST_CONTRACT_ARTIFACT_MANIFEST=artifacts/contracts/fast-contract-artifact-manifest.json
@@ -198,7 +207,8 @@ jobs:
             FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json \
             FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json \
             FAST_CONTRACT_CHECKSUMS=artifacts/contracts/sha256sums.txt \
-            FAST_CONTRACT_ARTIFACT_MANIFEST=artifacts/contracts/fast-contract-artifact-manifest.json
+            FAST_CONTRACT_ARTIFACT_MANIFEST=artifacts/contracts/fast-contract-artifact-manifest.json \
+            FAST_CONTRACT_POLICY_FINGERPRINT_JSON=artifacts/contracts/fast-contract-policy-fingerprint.json
 
       - name: Upload fast contract report artifact
         uses: actions/upload-artifact@v4
@@ -213,6 +223,7 @@ jobs:
             artifacts/contracts/fast-contract-consistency-status.json
             artifacts/contracts/fast-contract-consistency-kpi.json
             artifacts/contracts/fast-contract-artifact-manifest.json
+            artifacts/contracts/fast-contract-policy-fingerprint.json
             artifacts/contracts/sha256sums.txt
           if-no-files-found: error
           retention-days: 14
@@ -229,10 +240,13 @@ jobs:
             echo "- Fast contract consistency status JSON: artifacts/contracts/fast-contract-consistency-status.json"
             echo "- Fast contract consistency KPI JSON: artifacts/contracts/fast-contract-consistency-kpi.json"
             echo "- Fast contract artifact manifest JSON: artifacts/contracts/fast-contract-artifact-manifest.json"
+            echo "- Fast contract policy fingerprint JSON: artifacts/contracts/fast-contract-policy-fingerprint.json"
             echo "- Fast contract artifact checksums: artifacts/contracts/sha256sums.txt"
             signed_artifact_count="$$(python3 -c "import json;print(json.load(open('artifacts/contracts/fast-contract-artifact-manifest.json', 'r', encoding='utf-8')).get('signed_artifact_count', 0))")"
+            policy_fingerprint="$$(python3 -c "import json;print(json.load(open('artifacts/contracts/fast-contract-policy-fingerprint.json', 'r', encoding='utf-8')).get('fingerprint_sha256', 'missing'))")"
             echo "- Checksum status: VERIFIED"
             echo "- Signed artifacts: $${signed_artifact_count}"
+            echo "- Policy fingerprint (sha256): $${policy_fingerprint}"
             verdict_overall="$$(python3 -c "import json;print(json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8')).get('overall', 'UNKNOWN'))")"
             verdict_reasons="$$(python3 -c "import json;d=json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8'));r=d.get('reason_codes', []);print(','.join(r) if r else 'none')")"
             echo "- Verdict: $${verdict_overall} ($${verdict_reasons})"

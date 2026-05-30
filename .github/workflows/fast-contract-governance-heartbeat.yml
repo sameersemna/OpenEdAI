@@ -80,6 +80,9 @@ jobs:
       - name: Validate fast contract gate verdict reason-code behavior
         run: make fast-contract-gate-verdict-reason-codes-selftest
 
+      - name: Validate fast contract policy fingerprint JSON validator behavior
+        run: make fast-contract-policy-fingerprint-validate-selftest
+
       - name: Validate fast contract checksum verifier behavior
         run: make fast-contract-checksums-verify-selftest
 

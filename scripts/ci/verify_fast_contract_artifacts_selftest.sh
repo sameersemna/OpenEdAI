@@ -8,6 +8,7 @@ consistency_validator="${repo_root}/scripts/ci/validate_fast_contract_consistenc
 kpi_builder="${repo_root}/scripts/ci/fast_contract_consistency_kpi_json.sh"
 checksum_builder="${repo_root}/scripts/ci/generate_fast_contract_checksums.sh"
 manifest_builder="${repo_root}/scripts/ci/generate_fast_contract_artifact_manifest.sh"
+policy_fingerprint_builder="${repo_root}/scripts/ci/fast_contract_policy_fingerprint_json.sh"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -21,6 +22,7 @@ consistency_json="${tmp_dir}/fast-contract-consistency-status.json"
 kpi_json="${tmp_dir}/fast-contract-consistency-kpi.json"
 checksums_path="${tmp_dir}/sha256sums.txt"
 artifact_manifest="${tmp_dir}/fast-contract-artifact-manifest.json"
+policy_fingerprint_json="${tmp_dir}/fast-contract-policy-fingerprint.json"
 
 cat >"$report_ok" <<'EOF'
 # Fast Contract Gate Report (20260530-230000)
@@ -105,8 +107,9 @@ EOF
 bash "$consistency_validator" "$report_ok" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json"
 bash "$kpi_builder" "$consistency_json" "$trend_json" "$verdict_json" "$kpi_json"
 FAST_CONTRACT_ALLOWED_PREFIXES="${tmp_dir}/,docs/reports/,artifacts/contracts/" bash "$manifest_builder" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$artifact_manifest"
+FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=7 bash "$policy_fingerprint_builder" "$artifact_manifest" "$policy_fingerprint_json"
 bash "$checksum_builder" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$checksums_path" "$artifact_manifest"
-bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$checksums_path" "$artifact_manifest"
+bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$checksums_path" "$artifact_manifest" "$policy_fingerprint_json"
 
 report_bad="${tmp_dir}/bad-fast-contract-gate-report.md"
 cat >"$report_bad" <<'EOF'
@@ -116,7 +119,7 @@ cat >"$report_bad" <<'EOF'
 EOF
 
 set +e
-bash "$verifier" "$report_bad" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$checksums_path" "$artifact_manifest" >/dev/null 2>&1
+bash "$verifier" "$report_bad" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$checksums_path" "$artifact_manifest" "$policy_fingerprint_json" >/dev/null 2>&1
 rc=$?
 set -e
 
@@ -139,7 +142,7 @@ ok
 EOF
 
 set +e
-bash "$verifier" "$report_bad_command" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$checksums_path" "$artifact_manifest" >/dev/null 2>&1
+bash "$verifier" "$report_bad_command" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$checksums_path" "$artifact_manifest" "$policy_fingerprint_json" >/dev/null 2>&1
 rc=$?
 set -e
 
@@ -171,7 +174,7 @@ cat >"$verdict_json" <<'EOF'
 EOF
 
 set +e
-bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$checksums_path" "$artifact_manifest" >/dev/null 2>&1
+bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" "$checksums_path" "$artifact_manifest" "$policy_fingerprint_json" >/dev/null 2>&1
 rc=$?
 set -e
 
