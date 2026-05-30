@@ -56,6 +56,9 @@ jobs:
       - name: Validate fast contract consistency KPI assertor behavior
         run: make fast-contract-consistency-kpi-assert-selftest
 
+      - name: Validate fast contract artifact manifest validator behavior
+        run: make fast-contract-artifact-manifest-validate-selftest
+
       - name: Validate fast contract checksum verifier behavior
         run: make fast-contract-checksums-verify-selftest
 

@@ -56,6 +56,9 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract consistency KPI JSON validator behavior',
     'Assert fast contract consistency KPI thresholds',
     'Validate fast contract consistency KPI assertor behavior',
+    'Generate fast contract artifact manifest JSON',
+    'Validate fast contract artifact manifest JSON',
+    'Validate fast contract artifact manifest validator behavior',
     'Generate fast contract artifact checksums',
     'Verify fast contract artifact checksums',
     'Validate fast contract checksum verifier behavior',
@@ -314,6 +317,21 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract consistency kpi assertor selftest OK')
 
+            if 'make fast-contract-artifact-manifest-generate' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest generation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract artifact manifest generation OK')
+
+            if 'make fast-contract-artifact-manifest-validate' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest validation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract artifact manifest validation OK')
+
+            if 'make fast-contract-artifact-manifest-validate-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest validator selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract artifact manifest validator selftest OK')
+
             if 'make fast-contract-checksums-generate' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract checksum generation step')
             else:
@@ -365,6 +383,7 @@ else:
             'make fast-contract-consistency-reason-codes-selftest',
             'make fast-contract-consistency-kpi-validate-selftest',
             'make fast-contract-consistency-kpi-assert-selftest',
+            'make fast-contract-artifact-manifest-validate-selftest',
             'make fast-contract-checksums-verify-selftest',
             'make fast-contract-gate-manifest-assert-selftest',
             'make fast-contract-gate-manifest-assert',

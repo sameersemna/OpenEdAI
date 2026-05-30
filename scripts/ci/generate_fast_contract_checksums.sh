@@ -13,6 +13,7 @@ verdict_json="${5:-${FAST_CONTRACT_VERDICT_JSON:-artifacts/contracts/fast-contra
 consistency_json="${6:-${FAST_CONTRACT_CONSISTENCY_JSON:-artifacts/contracts/fast-contract-consistency-status.json}}"
 kpi_json="${7:-${FAST_CONTRACT_CONSISTENCY_KPI_JSON:-artifacts/contracts/fast-contract-consistency-kpi.json}}"
 checksums_path="${8:-${FAST_CONTRACT_CHECKSUMS:-artifacts/contracts/sha256sums.txt}}"
+manifest_path="${9:-${FAST_CONTRACT_ARTIFACT_MANIFEST:-artifacts/contracts/fast-contract-artifact-manifest.json}}"
 
 if [[ -z "$report_path" || ! -f "$report_path" ]]; then
   echo "[contracts][fail] fast contract report not found: ${report_path:-<empty>}" >&2
@@ -28,20 +29,33 @@ done
 
 mkdir -p "$(dirname "$checksums_path")"
 
-python3 - "$checksums_path" "$report_path" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" <<'PY'
+python3 - "$checksums_path" "$manifest_path" "$report_path" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" <<'PY'
 import hashlib
 import os
 import sys
 from pathlib import Path
+import json
 
 out_path = Path(sys.argv[1])
-files = [Path(p) for p in sys.argv[2:]]
+manifest_path = Path(sys.argv[2])
+default_files = [Path(p) for p in sys.argv[3:]]
+
+if manifest_path.exists():
+  with manifest_path.open("r", encoding="utf-8") as f:
+    manifest = json.load(f)
+  files = [Path(p) for p in manifest.get("files", [])]
+  if not files:
+    raise SystemExit("[contracts][fail] artifact manifest files list is empty")
+else:
+  files = default_files
 
 lines = []
 for p in files:
-    digest = hashlib.sha256(p.read_bytes()).hexdigest()
-    rel = os.path.relpath(str(p), start=os.getcwd())
-    lines.append(f"{digest}  {rel}")
+  if not p.exists():
+    raise SystemExit(f"[contracts][fail] cannot checksum missing file: {p}")
+  digest = hashlib.sha256(p.read_bytes()).hexdigest()
+  rel = os.path.relpath(str(p), start=os.getcwd())
+  lines.append(f"{digest}  {rel}")
 
 out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 print(f"[contracts][ok] wrote fast contract checksums: {out_path}")

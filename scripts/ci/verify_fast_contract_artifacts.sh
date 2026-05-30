@@ -12,6 +12,7 @@ verdict_json="${5:-${FAST_CONTRACT_VERDICT_JSON:-artifacts/contracts/fast-contra
 consistency_json="${6:-${FAST_CONTRACT_CONSISTENCY_JSON:-artifacts/contracts/fast-contract-consistency-status.json}}"
 kpi_json="${7:-${FAST_CONTRACT_CONSISTENCY_KPI_JSON:-artifacts/contracts/fast-contract-consistency-kpi.json}}"
 checksums_path="${8:-${FAST_CONTRACT_CHECKSUMS:-artifacts/contracts/sha256sums.txt}}"
+manifest_path="${9:-${FAST_CONTRACT_ARTIFACT_MANIFEST:-artifacts/contracts/fast-contract-artifact-manifest.json}}"
 
 if [[ -z "$report_path" || ! -f "$report_path" ]]; then
   echo "[contracts][fail] fast contract report not found: ${report_path:-<empty>}" >&2
@@ -34,6 +35,7 @@ bash "$repo_root/scripts/ci/validate_fast_contract_gate_verdict_json.sh" "$verdi
 FAST_CONTRACT_CONSISTENCY_WRITE=0 bash "$repo_root/scripts/ci/validate_fast_contract_consistency.sh" "$report_path" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json"
 bash "$repo_root/scripts/ci/validate_fast_contract_consistency_json.sh" "$consistency_json"
 bash "$repo_root/scripts/ci/validate_fast_contract_consistency_kpi_json.sh" "$kpi_json"
-bash "$repo_root/scripts/ci/verify_fast_contract_checksums.sh" "$checksums_path"
+bash "$repo_root/scripts/ci/validate_fast_contract_artifact_manifest.sh" "$manifest_path"
+bash "$repo_root/scripts/ci/verify_fast_contract_checksums.sh" "$checksums_path" "$manifest_path"
 
 echo "[contracts][ok] verified fast contract artifacts for upload"
