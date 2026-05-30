@@ -65,10 +65,16 @@ print_status_json() {
   local litellm_status
   local pepper_status
   local sourced_env="false"
+  local overall_status="up"
+  local require_all_up="${STATUS_REQUIRE_ALL_UP:-0}"
 
   pg_status="$(service_status "$postgres_host" "$postgres_port")"
   redis_status="$(service_status "$redis_host" "$redis_port")"
   litellm_status="$(service_status "$litellm_host" "$litellm_port")"
+
+  if [[ "$pg_status" != "up" || "$redis_status" != "up" || "$litellm_status" != "up" ]]; then
+    overall_status="degraded"
+  fi
 
   if [[ -n "${API_KEY_HASH_PEPPER:-}" ]]; then
     pepper_status="set"
@@ -83,6 +89,8 @@ print_status_json() {
 {
   "mode": "${mode}",
   "auto_source_env": ${sourced_env},
+  "overall_status": "${overall_status}",
+  "status_require_all_up": ${require_all_up},
   "api_key_hash_pepper": "${pepper_status}",
   "services": {
     "postgres": {"host": "${postgres_host}", "port": ${postgres_port}, "status": "${pg_status}"},
@@ -91,6 +99,11 @@ print_status_json() {
   }
 }
 EOF
+
+  if [[ "$require_all_up" == "1" && "$overall_status" != "up" ]]; then
+    echo "[contracts][fail] one or more services are down while STATUS_REQUIRE_ALL_UP=1" >&2
+    exit 1
+  fi
 }
 
 warn_or_fail() {

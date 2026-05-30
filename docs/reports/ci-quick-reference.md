@@ -104,11 +104,17 @@
 - Sample pre-push hook contract mode can be changed with `PRE_PUSH_CONTRACT_MODE=fast|strict|strict-local` (default `fast`).
 - Strict fast-contract gate also requires reachable local integration backends (notably Postgres for proxy usage-parameter contract tests).
 - Set `AUTO_SOURCE_ENV=1` to auto-source `.env` before contract environment checks (useful for local shells).
+- Set `STATUS_REQUIRE_ALL_UP=1` with `make contract-env-status-json` when automation should fail if Postgres/Redis/LiteLLM is unreachable.
 
 ## PR Gate Coverage
 - The `health-contract-fast` workflow job runs `make test-ci-fast` for baseline health/startup contract parity.
-- The `fast-contract-gate` workflow job runs `make test-ci-fast-contracts-report` and uploads the generated fast-contract report artifact.
+- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, runs `make test-ci-fast-contracts-report`, uploads both artifacts, and appends a step summary with JSON status.
 - Strict backend checks remain in `health-contract-strict` and run when explicitly enabled via workflow dispatch or repository variable.
+
+## Recommended Local Sequence
+1. `make contract-env-status`
+2. `make test-ci-fast-contracts`
+3. `make test-phase2`
 
 ## Interpreting Skips vs Fails
 - A `SKIP` in focused integration contracts usually indicates missing optional local prerequisites (for example `API_KEY_HASH_PEPPER` in non-strict fast mode).

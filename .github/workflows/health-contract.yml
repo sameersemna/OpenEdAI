@@ -40,6 +40,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Capture contract environment status JSON
+        run: |
+          mkdir -p artifacts/contracts
+          make contract-env-status-json > artifacts/contracts/contract-env-status.json
+
       - name: Run fast contract gate report
         run: make test-ci-fast-contracts-report
 
@@ -53,9 +58,24 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fast-contract-gate-report
-          path: ${{ steps.report.outputs.path }}
+          path: |
+            ${{ steps.report.outputs.path }}
+            artifacts/contracts/contract-env-status.json
           if-no-files-found: error
           retention-days: 14
+
+      - name: Append fast contract summary
+        run: |
+          {
+            echo "## Fast Contract Gate"
+            echo "- Report: ${{ steps.report.outputs.path }}"
+            echo "- Contract environment status JSON: artifacts/contracts/contract-env-status.json"
+            echo
+            echo "### Contract Environment Status"
+            echo '```json'
+            cat artifacts/contracts/contract-env-status.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   health-contract-strict:
     if: ${{ vars.RUN_STRICT_BACKEND_TESTS == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_strict_backends == 'true') }}
