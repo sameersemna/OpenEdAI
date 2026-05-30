@@ -67,6 +67,7 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract signed-count lock error-message behavior',
     'Validate fast contract gate verdict reason-code behavior',
     'Validate fast contract policy fingerprint JSON validator behavior',
+    'Validate fast contract policy fingerprint canonical serialization behavior',
     'Validate fast contract policy fingerprint drift behavior',
     'Assert fast contract artifact manifest path integrity',
     'Generate fast contract policy fingerprint JSON',
@@ -380,6 +381,11 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract policy fingerprint validator selftest OK')
 
+            if 'make fast-contract-policy-fingerprint-canonical-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract policy fingerprint canonical serialization selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract policy fingerprint canonical serialization selftest OK')
+
             if 'make fast-contract-policy-fingerprint-drift-selftest' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract policy fingerprint drift selftest step')
             else:
@@ -462,6 +468,7 @@ else:
         for required in [
             'make verify-workflow-conventions',
             'make verify-workflow-conventions-fast-contract-expected-count-selftest',
+            'make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-selftest',
             'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',
@@ -480,6 +487,7 @@ else:
             'make fast-contract-signed-count-lock-error-messages-selftest',
             'make fast-contract-gate-verdict-reason-codes-selftest',
             'make fast-contract-policy-fingerprint-validate-selftest',
+            'make fast-contract-policy-fingerprint-canonical-selftest',
             'make fast-contract-policy-fingerprint-drift-selftest',
             'make fast-contract-checksums-verify-selftest',
             'make fast-contract-checksums-tamper-selftest',

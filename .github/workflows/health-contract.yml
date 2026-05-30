@@ -175,6 +175,9 @@ jobs:
       - name: Validate fast contract policy fingerprint JSON validator behavior
         run: make fast-contract-policy-fingerprint-validate-selftest
 
+      - name: Validate fast contract policy fingerprint canonical serialization behavior
+        run: make fast-contract-policy-fingerprint-canonical-selftest
+
       - name: Validate fast contract policy fingerprint drift behavior
         run: make fast-contract-policy-fingerprint-drift-selftest
 

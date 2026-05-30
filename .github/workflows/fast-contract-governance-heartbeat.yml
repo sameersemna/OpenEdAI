@@ -29,6 +29,9 @@ jobs:
       - name: Validate workflow conventions expected-count behavior
         run: make verify-workflow-conventions-fast-contract-expected-count-selftest
 
+      - name: Validate workflow conventions policy-fingerprint-summary behavior
+        run: make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-selftest
+
       - name: Validate fast contract report markdown validator behavior
         run: make fast-contract-report-validate-selftest
 
@@ -82,6 +85,9 @@ jobs:
 
       - name: Validate fast contract policy fingerprint JSON validator behavior
         run: make fast-contract-policy-fingerprint-validate-selftest
+
+      - name: Validate fast contract policy fingerprint canonical serialization behavior
+        run: make fast-contract-policy-fingerprint-canonical-selftest
 
       - name: Validate fast contract policy fingerprint drift behavior
         run: make fast-contract-policy-fingerprint-drift-selftest
