@@ -28,6 +28,10 @@
     "Validate fast contract cross-artifact consistency",
     "Validate fast contract consistency status JSON",
     "Validate fast contract consistency JSON validator behavior",
+    "Validate fast contract consistency reason-code stability",
+    "Generate fast contract consistency KPI JSON",
+    "Validate fast contract consistency KPI JSON",
+    "Validate fast contract consistency KPI JSON validator behavior",
     "Verify fast contract artifacts before upload",
     "Upload fast contract report artifact",
     "Append fast contract summary"
@@ -53,6 +57,10 @@
     "make fast-contract-gate-manifest-assert",
     "make fast-contract-consistency-validate",
     "make fast-contract-consistency-validate-json",
+    "make fast-contract-consistency-reason-codes-selftest",
+    "make fast-contract-consistency-kpi-json",
+    "make fast-contract-consistency-kpi-validate-json",
+    "make fast-contract-consistency-kpi-validate-selftest",
     "make fast-contract-artifacts-verify"
   ]
 }

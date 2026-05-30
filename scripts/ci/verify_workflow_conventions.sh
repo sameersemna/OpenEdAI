@@ -50,6 +50,10 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract cross-artifact consistency',
     'Validate fast contract consistency status JSON',
     'Validate fast contract consistency JSON validator behavior',
+    'Validate fast contract consistency reason-code stability',
+    'Generate fast contract consistency KPI JSON',
+    'Validate fast contract consistency KPI JSON',
+    'Validate fast contract consistency KPI JSON validator behavior',
     'Verify fast contract artifacts before upload',
     'Upload fast contract report artifact',
     'Append fast contract summary',
@@ -275,6 +279,26 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract consistency json validator selftest OK')
 
+            if 'make fast-contract-consistency-reason-codes-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract consistency reason-code stability selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract consistency reason-code stability selftest OK')
+
+            if 'make fast-contract-consistency-kpi-json' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract consistency kpi generation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract consistency kpi generation OK')
+
+            if 'make fast-contract-consistency-kpi-validate-json' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract consistency kpi json validation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract consistency kpi json validation OK')
+
+            if 'make fast-contract-consistency-kpi-validate-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract consistency kpi validator selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract consistency kpi validator selftest OK')
+
             if 'make fast-contract-artifacts-verify' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verification step')
             else:
@@ -308,6 +332,8 @@ else:
             'make fast-contract-artifacts-verify-selftest',
             'make fast-contract-consistency-validate-selftest',
             'make fast-contract-consistency-json-validate-selftest',
+            'make fast-contract-consistency-reason-codes-selftest',
+            'make fast-contract-consistency-kpi-validate-selftest',
             'make fast-contract-gate-manifest-assert-selftest',
             'make fast-contract-gate-manifest-assert',
         ]:

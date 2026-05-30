@@ -4,6 +4,8 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "${script_dir}/../.." && pwd)"
 verifier="${repo_root}/scripts/ci/verify_fast_contract_artifacts.sh"
+consistency_validator="${repo_root}/scripts/ci/validate_fast_contract_consistency.sh"
+kpi_builder="${repo_root}/scripts/ci/fast_contract_consistency_kpi_json.sh"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -14,6 +16,7 @@ summary_json="${tmp_dir}/fast-contract-status-summary.json"
 trend_json="${tmp_dir}/fast-contract-trend.json"
 verdict_json="${tmp_dir}/fast-contract-gate-verdict.json"
 consistency_json="${tmp_dir}/fast-contract-consistency-status.json"
+kpi_json="${tmp_dir}/fast-contract-consistency-kpi.json"
 
 cat >"$report_ok" <<'EOF'
 # Fast Contract Gate Report (20260530-230000)
@@ -95,7 +98,9 @@ cat >"$verdict_json" <<'EOF'
 }
 EOF
 
-bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json"
+bash "$consistency_validator" "$report_ok" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json"
+bash "$kpi_builder" "$consistency_json" "$trend_json" "$verdict_json" "$kpi_json"
+bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json"
 
 report_bad="${tmp_dir}/bad-fast-contract-gate-report.md"
 cat >"$report_bad" <<'EOF'
@@ -105,7 +110,7 @@ cat >"$report_bad" <<'EOF'
 EOF
 
 set +e
-bash "$verifier" "$report_bad" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" >/dev/null 2>&1
+bash "$verifier" "$report_bad" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" >/dev/null 2>&1
 rc=$?
 set -e
 
@@ -128,7 +133,7 @@ ok
 EOF
 
 set +e
-bash "$verifier" "$report_bad_command" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" >/dev/null 2>&1
+bash "$verifier" "$report_bad_command" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" >/dev/null 2>&1
 rc=$?
 set -e
 
@@ -160,7 +165,7 @@ cat >"$verdict_json" <<'EOF'
 EOF
 
 set +e
-bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" >/dev/null 2>&1
+bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$kpi_json" >/dev/null 2>&1
 rc=$?
 set -e
 

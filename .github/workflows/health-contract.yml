@@ -127,6 +127,18 @@ jobs:
       - name: Validate fast contract consistency JSON validator behavior
         run: make fast-contract-consistency-json-validate-selftest
 
+      - name: Validate fast contract consistency reason-code stability
+        run: make fast-contract-consistency-reason-codes-selftest
+
+      - name: Generate fast contract consistency KPI JSON
+        run: make fast-contract-consistency-kpi-json FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json
+
+      - name: Validate fast contract consistency KPI JSON
+        run: make fast-contract-consistency-kpi-validate-json FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json
+
+      - name: Validate fast contract consistency KPI JSON validator behavior
+        run: make fast-contract-consistency-kpi-validate-selftest
+
       - name: Verify fast contract artifacts before upload
         run: |
           make fast-contract-artifacts-verify \
@@ -135,7 +147,8 @@ jobs:
             FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json \
             FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json \
             FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json \
-            FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json
+            FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json \
+            FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json
 
       - name: Upload fast contract report artifact
         uses: actions/upload-artifact@v4
@@ -148,6 +161,7 @@ jobs:
             artifacts/contracts/fast-contract-trend.json
             artifacts/contracts/fast-contract-gate-verdict.json
             artifacts/contracts/fast-contract-consistency-status.json
+            artifacts/contracts/fast-contract-consistency-kpi.json
           if-no-files-found: error
           retention-days: 14
 
@@ -161,6 +175,7 @@ jobs:
             echo "- Fast contract trend JSON: artifacts/contracts/fast-contract-trend.json"
             echo "- Fast contract gate verdict JSON: artifacts/contracts/fast-contract-gate-verdict.json"
             echo "- Fast contract consistency status JSON: artifacts/contracts/fast-contract-consistency-status.json"
+            echo "- Fast contract consistency KPI JSON: artifacts/contracts/fast-contract-consistency-kpi.json"
             verdict_overall="$$(python3 -c "import json;print(json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8')).get('overall', 'UNKNOWN'))")"
             verdict_reasons="$$(python3 -c "import json;d=json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8'));r=d.get('reason_codes', []);print(','.join(r) if r else 'none')")"
             echo "- Verdict: $${verdict_overall} ($${verdict_reasons})"
@@ -188,6 +203,11 @@ jobs:
             echo "### Fast Contract Consistency Status"
             echo '```json'
             cat artifacts/contracts/fast-contract-consistency-status.json
+            echo '```'
+            echo
+            echo "### Fast Contract Consistency KPI"
+            echo '```json'
+            cat artifacts/contracts/fast-contract-consistency-kpi.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
