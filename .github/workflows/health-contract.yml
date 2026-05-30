@@ -45,6 +45,9 @@ jobs:
           mkdir -p artifacts/contracts
           make contract-env-status-json > artifacts/contracts/contract-env-status.json
 
+      - name: Validate contract environment status JSON artifact
+        run: make contract-env-validate-json CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json
+
       - name: Validate contract environment checker behavior
         run: make contract-env-selftest
 

@@ -75,7 +75,9 @@
 - Focused management route contracts (auth + read-only store errors): `make test-management-route-contract`
 - Contract environment status snapshot: `make contract-env-status`
 - Contract environment status snapshot (JSON): `make contract-env-status-json`
+- Contract environment status JSON validation: `make contract-env-validate-json`
 - Contract environment status self-test (JSON + strict failure semantics): `make contract-env-selftest`
+- Local parity run for fast-contract-gate workflow: `make test-ci-fast-contract-gate-local`
 - Pre-push hook install (interactive): `make install-prepush-hook`
 - Pre-push hook install dry-run: `make install-prepush-hook-dry-run`
 - Pre-push hook install force: `make install-prepush-hook-force`
@@ -109,7 +111,7 @@
 
 ## PR Gate Coverage
 - The `health-contract-fast` workflow job runs `make test-ci-fast` for baseline health/startup contract parity.
-- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, uploads both artifacts, and appends a step summary with JSON status.
+- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, validates JSON shape with `make contract-env-validate-json`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, uploads both artifacts, and appends a step summary with JSON status.
 - Strict backend checks remain in `health-contract-strict` and run when explicitly enabled via workflow dispatch or repository variable.
 
 ## Recommended Local Sequence
