@@ -1,4 +1,4 @@
-.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-management-route-contract test-proxy-flow-contract test-proxy-usage-params-contract contract-env-status contract-env-status-json contract-env-validate-json contract-env-validate-selftest contract-env-selftest test-ci-fast-contracts-preflight test-ci-fast-contracts test-ci-fast-contracts-strict test-ci-fast-contracts-strict-local test-ci-fast-contracts-report test-ci-fast-contract-gate-local test-ci-fast-proxy-usage test-prepush-local test-proxy-operational test-proxy-quick-local test-proxy-gate-local test-proxy-operational-flake test-race test-phase2-unit test-phase2-contract test-phase2-race test-phase2-runtime test-phase2 bench-health bench-api-errors bench-middleware bench-assert bench-assert-stable bench-assert-json bench-compare-json bench-compare-self test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
+.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-management-route-contract test-proxy-flow-contract test-proxy-usage-params-contract contract-env-status contract-env-status-json contract-env-validate-json contract-env-validate-selftest contract-env-selftest fast-contract-status-summary test-ci-fast-contracts-preflight test-ci-fast-contracts test-ci-fast-contracts-strict test-ci-fast-contracts-strict-local test-ci-fast-contracts-report test-ci-fast-contract-gate-local test-ci-fast-proxy-usage test-prepush-local test-prepush-parity-local test-proxy-operational test-proxy-quick-local test-proxy-gate-local test-proxy-operational-flake test-race test-phase2-unit test-phase2-contract test-phase2-race test-phase2-runtime test-phase2 bench-health bench-api-errors bench-middleware bench-assert bench-assert-stable bench-assert-json bench-compare-json bench-compare-self test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
 
 tidy:
 	go mod tidy
@@ -68,6 +68,9 @@ contract-env-validate-selftest:
 contract-env-selftest:
 	bash scripts/ci/check_contract_gate_env_selftest.sh
 
+fast-contract-status-summary:
+	bash scripts/ci/fast_contract_status_summary.sh "$${CONTRACT_ENV_JSON:-artifacts/contracts/contract-env-status.json}" "$${FAST_CONTRACT_REPORT:-}" "$${FAST_CONTRACT_STATUS_SUMMARY:-artifacts/contracts/fast-contract-status-summary.json}"
+
 test-ci-fast-contracts-preflight:
 	bash scripts/ci/check_contract_gate_env.sh fast
 
@@ -107,13 +110,20 @@ test-ci-fast-contract-gate-local:
 	mkdir -p artifacts/contracts; \
 	$(MAKE) contract-env-status-json > artifacts/contracts/contract-env-status.json; \
 	$(MAKE) contract-env-validate-json CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json; \
+	$(MAKE) contract-env-validate-selftest; \
 	$(MAKE) contract-env-selftest; \
-	$(MAKE) test-ci-fast-contracts-report
+	$(MAKE) test-ci-fast-contracts-report; \
+	latest_report="$$(ls -1t docs/reports/*-fast-contract-gate-report.md | head -1)"; \
+	$(MAKE) fast-contract-status-summary CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json FAST_CONTRACT_REPORT="$$latest_report" FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json
 
 test-ci-fast-proxy-usage: test-health-contract test-proxy-usage-params-contract
 
 test-prepush-local: test-ci-fast-proxy-usage
 	$(MAKE) test-proxy-gate-local ITERATIONS=$${ITERATIONS:-2}
+
+test-prepush-parity-local:
+	$(MAKE) test-prepush-local ITERATIONS=$${ITERATIONS:-2}
+	$(MAKE) test-ci-fast-contract-gate-local
 
 test-proxy-operational:
 	go test ./tests/integration -run TestProxyOperationalFlow -count=1 -v

@@ -21,6 +21,18 @@ SMOKE_WORKFLOWS = {
 }
 HELPER = Path('scripts/ci/workflow_artifact_manifest.sh')
 GOVERNANCE_CONVENTIONS_WORKFLOW = Path('.github/workflows/governance-workflow-conventions.yml')
+HEALTH_CONTRACT_WORKFLOW = Path('.github/workflows/health-contract.yml')
+FAST_CONTRACT_REQUIRED_ORDER = [
+    'Capture contract environment status JSON',
+    'Validate contract environment status JSON artifact',
+    'Validate contract environment JSON validator behavior',
+    'Validate contract environment checker behavior',
+    'Run fast contract gate report',
+    'Resolve latest fast contract report path',
+    'Generate fast contract status summary JSON',
+    'Upload fast contract report artifact',
+    'Append fast contract summary',
+]
 
 errors = []
 checks = []
@@ -114,6 +126,38 @@ for path_str, mode in WORKFLOWS.items():
                 errors.append(f'{path_str}: missing benchmark artifact generation for {artifact}')
             else:
                 checks.append(f'{path_str}: benchmark artifact generation OK ({artifact})')
+
+if not HEALTH_CONTRACT_WORKFLOW.exists():
+    errors.append('.github/workflows/health-contract.yml: missing workflow file')
+else:
+    try:
+        health_data = yaml.load(HEALTH_CONTRACT_WORKFLOW.read_text(encoding='utf-8'), Loader=yaml.BaseLoader)
+    except Exception as exc:
+        errors.append(f'.github/workflows/health-contract.yml: invalid yaml: {exc}')
+    else:
+        jobs = health_data.get('jobs', {}) if isinstance(health_data, dict) else {}
+        fast_gate = jobs.get('fast-contract-gate', {}) if isinstance(jobs, dict) else {}
+        steps = fast_gate.get('steps', []) if isinstance(fast_gate, dict) else []
+        if not steps:
+            errors.append('.github/workflows/health-contract.yml: fast-contract-gate missing steps')
+        else:
+            step_names = [str(step.get('name', '')) for step in steps if isinstance(step, dict)]
+            index = -1
+            for required in FAST_CONTRACT_REQUIRED_ORDER:
+                try:
+                    next_index = step_names.index(required, index + 1)
+                except ValueError:
+                    errors.append(f'.github/workflows/health-contract.yml: fast-contract-gate missing ordered step "{required}"')
+                    break
+                index = next_index
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast-contract-gate ordered steps OK')
+
+            run_blocks = '\n'.join(str(step.get('run', '')) for step in steps if isinstance(step, dict))
+            if 'make fast-contract-status-summary' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract status summary generation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract status summary generation OK')
 
 if errors:
     print('[workflow-conventions][fail]')

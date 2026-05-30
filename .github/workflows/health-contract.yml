@@ -63,6 +63,13 @@ jobs:
           latest_report=$(ls -1t docs/reports/*-fast-contract-gate-report.md | head -1)
           echo "path=${latest_report}" >> "$GITHUB_OUTPUT"
 
+      - name: Generate fast contract status summary JSON
+        run: |
+          make fast-contract-status-summary \
+            CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json \
+            FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" \
+            FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json
+
       - name: Upload fast contract report artifact
         uses: actions/upload-artifact@v4
         with:
@@ -70,6 +77,7 @@ jobs:
           path: |
             ${{ steps.report.outputs.path }}
             artifacts/contracts/contract-env-status.json
+            artifacts/contracts/fast-contract-status-summary.json
           if-no-files-found: error
           retention-days: 14
 
@@ -79,10 +87,16 @@ jobs:
             echo "## Fast Contract Gate"
             echo "- Report: ${{ steps.report.outputs.path }}"
             echo "- Contract environment status JSON: artifacts/contracts/contract-env-status.json"
+            echo "- Fast contract status summary JSON: artifacts/contracts/fast-contract-status-summary.json"
             echo
             echo "### Contract Environment Status"
             echo '```json'
             cat artifacts/contracts/contract-env-status.json
+            echo '```'
+            echo
+            echo "### Fast Contract Status Summary"
+            echo '```json'
+            cat artifacts/contracts/fast-contract-status-summary.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

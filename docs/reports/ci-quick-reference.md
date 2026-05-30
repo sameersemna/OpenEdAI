@@ -28,6 +28,8 @@
 - Fast contract gate (strict backend mode): `make test-ci-fast-contracts-strict`
 - Fast contract gate (strict + local backend reachability checks): `make test-ci-fast-contracts-strict-local`
 - Fast contract gate with report artifact output: `make test-ci-fast-contracts-report`
+- Fast contract gate status summary artifact generation: `make fast-contract-status-summary`
+- Full local parity run for fast-contract-gate workflow (status JSON + validator checks + report + summary): `make test-ci-fast-contract-gate-local`
 - Fast parity + usage query-param contract checks: `make test-ci-fast-proxy-usage`
   - The sample `scripts/git-hooks/pre-push.example` uses this command before running `make test-proxy-gate-local`.
 - Strict parity: `make test-ci-strict`
@@ -35,6 +37,7 @@
 - Focused proxy-flow contract checks: `make test-proxy-flow-contract`
 - Focused usage query-param contract checks: `make test-proxy-usage-params-contract`
 - Simulate sample pre-push flow locally: `make test-prepush-local` (override gate flake count with `ITERATIONS=<n>`)
+- Combined pre-push + fast-contract-gate parity run: `make test-prepush-parity-local` (override with `ITERATIONS=<n>`)
 - Single operational flow check: `make test-proxy-operational`
 - Combined focused + operational single-run checks: `make test-proxy-quick-local`
 - High-confidence local gate (quick-local + flake): `make test-proxy-gate-local` (override flake count with `ITERATIONS=<n>`)
@@ -78,7 +81,6 @@
 - Contract environment status JSON validation: `make contract-env-validate-json`
 - Contract environment status JSON validator self-test: `make contract-env-validate-selftest`
 - Contract environment status self-test (JSON + strict failure semantics): `make contract-env-selftest`
-- Local parity run for fast-contract-gate workflow: `make test-ci-fast-contract-gate-local`
 - Pre-push hook install (interactive): `make install-prepush-hook`
 - Pre-push hook install dry-run: `make install-prepush-hook-dry-run`
 - Pre-push hook install force: `make install-prepush-hook-force`
@@ -112,7 +114,7 @@
 
 ## PR Gate Coverage
 - The `health-contract-fast` workflow job runs `make test-ci-fast` for baseline health/startup contract parity.
-- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, validates JSON shape with `make contract-env-validate-json`, runs `make contract-env-validate-selftest`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, uploads both artifacts, and appends a step summary with JSON status.
+- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, validates JSON shape with `make contract-env-validate-json`, runs `make contract-env-validate-selftest`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, generates `make fast-contract-status-summary`, uploads all fast-gate artifacts, and appends a step summary with both status JSON payloads.
 - Strict backend checks remain in `health-contract-strict` and run when explicitly enabled via workflow dispatch or repository variable.
 
 ## Recommended Local Sequence
