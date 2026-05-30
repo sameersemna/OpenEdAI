@@ -70,6 +70,12 @@ jobs:
             FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" \
             FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json
 
+      - name: Validate fast contract status summary JSON
+        run: make fast-contract-status-validate-json FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json
+
+      - name: Validate fast contract status summary validator behavior
+        run: make fast-contract-status-validate-selftest
+
       - name: Upload fast contract report artifact
         uses: actions/upload-artifact@v4
         with:

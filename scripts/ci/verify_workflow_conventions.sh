@@ -30,6 +30,8 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Run fast contract gate report',
     'Resolve latest fast contract report path',
     'Generate fast contract status summary JSON',
+    'Validate fast contract status summary JSON',
+    'Validate fast contract status summary validator behavior',
     'Upload fast contract report artifact',
     'Append fast contract summary',
 ]
@@ -158,6 +160,16 @@ else:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract status summary generation step')
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract status summary generation OK')
+
+            if 'make fast-contract-status-validate-json' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract status summary json validation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract status summary json validation OK')
+
+            if 'make fast-contract-status-validate-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract status summary validator selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract status summary validator selftest OK')
 
 if errors:
     print('[workflow-conventions][fail]')

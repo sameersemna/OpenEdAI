@@ -8,6 +8,10 @@ echo "[pre-push] Running fast contract gate checks..."
 contract_mode="${PRE_PUSH_CONTRACT_MODE:-fast}"
 echo "[pre-push] contract mode: ${contract_mode}"
 case "$contract_mode" in
+	parity)
+		make test-prepush-parity-local ITERATIONS="${ITERATIONS:-2}"
+		exit 0
+		;;
 	strict-local)
 		make contract-env-status
 		make test-ci-fast-contracts-strict-local

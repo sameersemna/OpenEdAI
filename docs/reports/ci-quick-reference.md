@@ -29,6 +29,8 @@
 - Fast contract gate (strict + local backend reachability checks): `make test-ci-fast-contracts-strict-local`
 - Fast contract gate with report artifact output: `make test-ci-fast-contracts-report`
 - Fast contract gate status summary artifact generation: `make fast-contract-status-summary`
+- Fast contract status summary JSON validation: `make fast-contract-status-validate-json`
+- Fast contract status summary validator self-test: `make fast-contract-status-validate-selftest`
 - Full local parity run for fast-contract-gate workflow (status JSON + validator checks + report + summary): `make test-ci-fast-contract-gate-local`
 - Fast parity + usage query-param contract checks: `make test-ci-fast-proxy-usage`
   - The sample `scripts/git-hooks/pre-push.example` uses this command before running `make test-proxy-gate-local`.
@@ -108,13 +110,14 @@
 - Fast contract preflight checks for `API_KEY_HASH_PEPPER` and warns when it is missing.
 - Set `FAST_CONTRACTS_REQUIRE_INTEGRATION_ENV=1` to make missing integration env fail fast.
 - Sample pre-push hook contract mode can be changed with `PRE_PUSH_CONTRACT_MODE=fast|strict|strict-local` (default `fast`).
+- Use `PRE_PUSH_CONTRACT_MODE=parity` in the sample pre-push hook for a high-assurance combined local parity run.
 - Strict fast-contract gate also requires reachable local integration backends (notably Postgres for proxy usage-parameter contract tests).
 - Set `AUTO_SOURCE_ENV=1` to auto-source `.env` before contract environment checks (useful for local shells).
 - Set `STATUS_REQUIRE_ALL_UP=1` with `make contract-env-status-json` when automation should fail if Postgres/Redis/LiteLLM is unreachable.
 
 ## PR Gate Coverage
 - The `health-contract-fast` workflow job runs `make test-ci-fast` for baseline health/startup contract parity.
-- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, validates JSON shape with `make contract-env-validate-json`, runs `make contract-env-validate-selftest`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, generates `make fast-contract-status-summary`, uploads all fast-gate artifacts, and appends a step summary with both status JSON payloads.
+- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, validates JSON shape with `make contract-env-validate-json`, runs `make contract-env-validate-selftest`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, generates `make fast-contract-status-summary`, validates summary shape with `make fast-contract-status-validate-json`, runs `make fast-contract-status-validate-selftest`, uploads all fast-gate artifacts, and appends a step summary with both status JSON payloads.
 - Strict backend checks remain in `health-contract-strict` and run when explicitly enabled via workflow dispatch or repository variable.
 
 ## Recommended Local Sequence
