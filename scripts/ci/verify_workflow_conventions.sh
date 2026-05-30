@@ -48,6 +48,8 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract gate manifest assertion behavior',
     'Assert fast contract gate manifest conformance',
     'Validate fast contract cross-artifact consistency',
+    'Validate fast contract consistency status JSON',
+    'Validate fast contract consistency JSON validator behavior',
     'Verify fast contract artifacts before upload',
     'Upload fast contract report artifact',
     'Append fast contract summary',
@@ -263,6 +265,16 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract cross-artifact consistency validation OK')
 
+            if 'make fast-contract-consistency-validate-json' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract consistency status json validation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract consistency status json validation OK')
+
+            if 'make fast-contract-consistency-json-validate-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract consistency json validator selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract consistency json validator selftest OK')
+
             if 'make fast-contract-artifacts-verify' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verification step')
             else:
@@ -295,6 +307,7 @@ else:
             'make fast-contract-gate-verdict-validate-selftest',
             'make fast-contract-artifacts-verify-selftest',
             'make fast-contract-consistency-validate-selftest',
+            'make fast-contract-consistency-json-validate-selftest',
             'make fast-contract-gate-manifest-assert-selftest',
             'make fast-contract-gate-manifest-assert',
         ]:

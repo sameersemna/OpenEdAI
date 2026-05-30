@@ -26,6 +26,8 @@
     "Validate fast contract gate manifest assertion behavior",
     "Assert fast contract gate manifest conformance",
     "Validate fast contract cross-artifact consistency",
+    "Validate fast contract consistency status JSON",
+    "Validate fast contract consistency JSON validator behavior",
     "Verify fast contract artifacts before upload",
     "Upload fast contract report artifact",
     "Append fast contract summary"
@@ -46,9 +48,11 @@
     "make fast-contract-gate-verdict-selftest",
     "make fast-contract-artifacts-verify-selftest",
     "make fast-contract-consistency-validate-selftest",
+    "make fast-contract-consistency-json-validate-selftest",
     "make fast-contract-gate-manifest-assert-selftest",
     "make fast-contract-gate-manifest-assert",
     "make fast-contract-consistency-validate",
+    "make fast-contract-consistency-validate-json",
     "make fast-contract-artifacts-verify"
   ]
 }

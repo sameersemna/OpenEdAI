@@ -3,6 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 validator="${script_dir}/validate_fast_contract_consistency.sh"
+json_validator="${script_dir}/validate_fast_contract_consistency_json.sh"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -11,6 +12,7 @@ report_ok="${tmp_dir}/ok-fast-contract-gate-report.md"
 summary_json="${tmp_dir}/fast-contract-status-summary.json"
 trend_json="${tmp_dir}/fast-contract-trend.json"
 verdict_json="${tmp_dir}/fast-contract-gate-verdict.json"
+consistency_json="${tmp_dir}/fast-contract-consistency-status.json"
 
 cat >"$report_ok" <<'EOF'
 # Fast Contract Gate Report (20260530-230000)
@@ -77,7 +79,8 @@ cat >"$verdict_json" <<'EOF'
 }
 EOF
 
-bash "$validator" "$report_ok" "$summary_json" "$trend_json" "$verdict_json"
+bash "$validator" "$report_ok" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json"
+bash "$json_validator" "$consistency_json"
 
 cat >"$verdict_json" <<'EOF'
 {
@@ -102,7 +105,7 @@ cat >"$verdict_json" <<'EOF'
 EOF
 
 set +e
-bash "$validator" "$report_ok" "$summary_json" "$trend_json" "$verdict_json" >/dev/null 2>&1
+bash "$validator" "$report_ok" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" >/dev/null 2>&1
 rc=$?
 set -e
 

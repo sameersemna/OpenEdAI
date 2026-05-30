@@ -9,6 +9,7 @@ contract_json="${2:-${CONTRACT_ENV_JSON:-artifacts/contracts/contract-env-status
 summary_json="${3:-${FAST_CONTRACT_STATUS_SUMMARY:-artifacts/contracts/fast-contract-status-summary.json}}"
 trend_json="${4:-${FAST_CONTRACT_TREND_JSON:-artifacts/contracts/fast-contract-trend.json}}"
 verdict_json="${5:-${FAST_CONTRACT_VERDICT_JSON:-artifacts/contracts/fast-contract-gate-verdict.json}}"
+consistency_json="${6:-${FAST_CONTRACT_CONSISTENCY_JSON:-artifacts/contracts/fast-contract-consistency-status.json}}"
 
 if [[ -z "$report_path" || ! -f "$report_path" ]]; then
   echo "[contracts][fail] fast contract report not found: ${report_path:-<empty>}" >&2
@@ -28,6 +29,7 @@ bash "$repo_root/scripts/ci/validate_contract_env_status_json.sh" "$contract_jso
 bash "$repo_root/scripts/ci/validate_fast_contract_status_summary_json.sh" "$summary_json"
 bash "$repo_root/scripts/ci/validate_fast_contract_trend_json.sh" "$trend_json"
 bash "$repo_root/scripts/ci/validate_fast_contract_gate_verdict_json.sh" "$verdict_json"
-bash "$repo_root/scripts/ci/validate_fast_contract_consistency.sh" "$report_path" "$summary_json" "$trend_json" "$verdict_json"
+bash "$repo_root/scripts/ci/validate_fast_contract_consistency.sh" "$report_path" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json"
+bash "$repo_root/scripts/ci/validate_fast_contract_consistency_json.sh" "$consistency_json"
 
 echo "[contracts][ok] verified fast contract artifacts for upload"

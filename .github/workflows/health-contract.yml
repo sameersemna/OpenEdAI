@@ -119,7 +119,13 @@ jobs:
         run: make fast-contract-gate-manifest-assert
 
       - name: Validate fast contract cross-artifact consistency
-        run: make fast-contract-consistency-validate FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json
+        run: make fast-contract-consistency-validate FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json
+
+      - name: Validate fast contract consistency status JSON
+        run: make fast-contract-consistency-validate-json FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json
+
+      - name: Validate fast contract consistency JSON validator behavior
+        run: make fast-contract-consistency-json-validate-selftest
 
       - name: Verify fast contract artifacts before upload
         run: |
@@ -128,7 +134,8 @@ jobs:
             CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json \
             FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json \
             FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json \
-            FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json
+            FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json \
+            FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json
 
       - name: Upload fast contract report artifact
         uses: actions/upload-artifact@v4
@@ -140,6 +147,7 @@ jobs:
             artifacts/contracts/fast-contract-status-summary.json
             artifacts/contracts/fast-contract-trend.json
             artifacts/contracts/fast-contract-gate-verdict.json
+            artifacts/contracts/fast-contract-consistency-status.json
           if-no-files-found: error
           retention-days: 14
 
@@ -152,6 +160,7 @@ jobs:
             echo "- Fast contract status summary JSON: artifacts/contracts/fast-contract-status-summary.json"
             echo "- Fast contract trend JSON: artifacts/contracts/fast-contract-trend.json"
             echo "- Fast contract gate verdict JSON: artifacts/contracts/fast-contract-gate-verdict.json"
+            echo "- Fast contract consistency status JSON: artifacts/contracts/fast-contract-consistency-status.json"
             verdict_overall="$$(python3 -c "import json;print(json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8')).get('overall', 'UNKNOWN'))")"
             verdict_reasons="$$(python3 -c "import json;d=json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8'));r=d.get('reason_codes', []);print(','.join(r) if r else 'none')")"
             echo "- Verdict: $${verdict_overall} ($${verdict_reasons})"
@@ -174,6 +183,11 @@ jobs:
             echo "### Fast Contract Verdict"
             echo '```json'
             cat artifacts/contracts/fast-contract-gate-verdict.json
+            echo '```'
+            echo
+            echo "### Fast Contract Consistency Status"
+            echo '```json'
+            cat artifacts/contracts/fast-contract-consistency-status.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

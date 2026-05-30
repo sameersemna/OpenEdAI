@@ -5,6 +5,7 @@ report_path="${1:-${FAST_CONTRACT_REPORT:-}}"
 summary_json="${2:-${FAST_CONTRACT_STATUS_SUMMARY:-artifacts/contracts/fast-contract-status-summary.json}}"
 trend_json="${3:-${FAST_CONTRACT_TREND_JSON:-artifacts/contracts/fast-contract-trend.json}}"
 verdict_json="${4:-${FAST_CONTRACT_VERDICT_JSON:-artifacts/contracts/fast-contract-gate-verdict.json}}"
+consistency_json="${5:-${FAST_CONTRACT_CONSISTENCY_JSON:-artifacts/contracts/fast-contract-consistency-status.json}}"
 
 if [[ -z "$report_path" || ! -f "$report_path" ]]; then
   echo "[contracts][fail] fast contract report not found: ${report_path:-<empty>}" >&2
@@ -17,12 +18,13 @@ for path in "$summary_json" "$trend_json" "$verdict_json"; do
   fi
 done
 
-python3 - "$report_path" "$summary_json" "$trend_json" "$verdict_json" <<'PY'
+python3 - "$report_path" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" <<'PY'
 import json
 import re
 import sys
+from datetime import datetime, timezone
 
-report_path, summary_path, trend_path, verdict_path = sys.argv[1:5]
+report_path, summary_path, trend_path, verdict_path, consistency_path = sys.argv[1:6]
 
 with open(report_path, "r", encoding="utf-8") as f:
     report_text = f.read()
@@ -34,16 +36,20 @@ with open(verdict_path, "r", encoding="utf-8") as f:
     verdict = json.load(f)
 
 m = re.search(r"^- Status:[ \t]*(PASS|FAIL)$", report_text, flags=re.MULTILINE)
-if not m:
-    raise SystemExit("[contracts][fail] report status line not found while checking consistency")
-report_status = m.group(1)
+report_status = m.group(1) if m else "UNKNOWN"
+
+reason_codes = []
+
+def add_reason(code, condition):
+    if condition:
+        reason_codes.append(code)
+
+add_reason("report_status_missing", m is None)
 
 summary_report_status = str(summary.get("report_status", "UNKNOWN"))
 summary_overall = str(summary.get("overall", "UNKNOWN"))
-if report_status != summary_report_status:
-    raise SystemExit("[contracts][fail] inconsistency: report status does not match summary.report_status")
-if summary_overall != summary_report_status:
-    raise SystemExit("[contracts][fail] inconsistency: summary.overall does not match summary.report_status")
+add_reason("report_summary_status_mismatch", report_status != "UNKNOWN" and report_status != summary_report_status)
+add_reason("summary_overall_status_mismatch", summary_overall != summary_report_status)
 
 trend_summary = trend.get("summary", {})
 trend_fail = int(trend_summary.get("fail", 0))
@@ -52,17 +58,13 @@ trend_pass_rate = float(trend_summary.get("pass_rate_percent", 0.0))
 
 observed = verdict.get("observed", {})
 thresholds = verdict.get("thresholds", {})
-reason_codes = verdict.get("reason_codes", [])
+verdict_reason_codes = list(verdict.get("reason_codes", []))
 overall = str(verdict.get("overall", "UNKNOWN"))
 
-if observed.get("report_status") != summary_report_status:
-    raise SystemExit("[contracts][fail] inconsistency: verdict.observed.report_status does not match summary.report_status")
-if int(observed.get("fail", -1)) != trend_fail:
-    raise SystemExit("[contracts][fail] inconsistency: verdict.observed.fail does not match trend.summary.fail")
-if int(observed.get("unknown", -1)) != trend_unknown:
-    raise SystemExit("[contracts][fail] inconsistency: verdict.observed.unknown does not match trend.summary.unknown")
-if abs(float(observed.get("pass_rate_percent", -1.0)) - trend_pass_rate) > 1e-9:
-    raise SystemExit("[contracts][fail] inconsistency: verdict.observed.pass_rate_percent does not match trend.summary.pass_rate_percent")
+add_reason("verdict_observed_report_status_mismatch", observed.get("report_status") != summary_report_status)
+add_reason("verdict_observed_fail_mismatch", int(observed.get("fail", -1)) != trend_fail)
+add_reason("verdict_observed_unknown_mismatch", int(observed.get("unknown", -1)) != trend_unknown)
+add_reason("verdict_observed_pass_rate_mismatch", abs(float(observed.get("pass_rate_percent", -1.0)) - trend_pass_rate) > 1e-9)
 
 max_fail = int(thresholds.get("max_fail", 0))
 max_unknown = int(thresholds.get("max_unknown", 0))
@@ -86,10 +88,42 @@ expected_overall = "PASS" if not expected_reasons else "FAIL"
 if not expected_reasons:
     expected_reasons = ["none"]
 
-if overall != expected_overall:
-    raise SystemExit("[contracts][fail] inconsistency: verdict.overall does not match computed outcome")
-if list(reason_codes) != expected_reasons:
-    raise SystemExit("[contracts][fail] inconsistency: verdict.reason_codes do not match computed reasons")
+add_reason("verdict_overall_mismatch", overall != expected_overall)
+add_reason("verdict_reason_codes_mismatch", verdict_reason_codes != expected_reasons)
 
-print("[contracts][ok] validated fast contract cross-artifact consistency")
+consistency_overall = "PASS" if not reason_codes else "FAIL"
+payload = {
+    "generated_at": datetime.now(timezone.utc).isoformat(),
+    "workflow": "fast-contract-gate",
+    "overall": consistency_overall,
+    "reason_codes": reason_codes or ["none"],
+    "paths": {
+        "report": report_path,
+        "status_summary": summary_path,
+        "trend": trend_path,
+        "verdict": verdict_path,
+    },
+    "observed": {
+        "report_status": report_status,
+        "summary_report_status": summary_report_status,
+        "summary_overall": summary_overall,
+        "trend_fail": trend_fail,
+        "trend_unknown": trend_unknown,
+        "trend_pass_rate_percent": trend_pass_rate,
+        "verdict_overall": overall,
+        "verdict_reason_codes": verdict_reason_codes,
+    },
+    "expected_from_thresholds": {
+        "overall": expected_overall,
+        "reason_codes": expected_reasons,
+    },
+}
+
+with open(consistency_path, "w", encoding="utf-8") as f:
+    json.dump(payload, f, separators=(",", ":"))
+
+if consistency_overall != "PASS":
+    raise SystemExit("[contracts][fail] fast contract cross-artifact consistency failed")
+
+print(f"[contracts][ok] validated fast contract cross-artifact consistency: {consistency_path}")
 PY
