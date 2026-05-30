@@ -32,13 +32,13 @@ test-health-contract:
 	go test ./tests/integration -run 'TestHealthzContract|TestGatewayStartupRejectsNegativeHealthDegradedLatency|TestIntegrationStrictBackends' -count=1
 
 test-phase2-unit:
-	go test ./internal/config ./internal/api ./internal/middleware ./internal/services -run 'TestLoad|TestRAGSearchResponseStatus|TestRAGSearchHandlerStatusContract|TestRAGIndexHandlerContract|TestRAGBackendError|TestCreateAPIKey|TestListAPIKeys|TestUsageSummary|TestRevokeAPIKey|TestRotateAPIKey|TestRateLimitMiddleware|TestAdminMiddleware|TestAuthMiddleware|TestLiteLLM|TestElasticsearch|TestQdrant' -count=1
+	go test ./internal/config ./internal/api ./internal/middleware ./internal/services -run 'TestLoad|TestRAGSearchResponseStatus|TestRAGSearchHandlerStatusContract|TestRAGIndexHandlerContract|TestRAGBackendError|TestCreateAPIKey|TestListAPIKeys|TestUsageSummary|TestRevokeAPIKey|TestRotateAPIKey|TestManagementRouteAuthContract|TestRateLimitMiddleware|TestAdminMiddleware|TestAuthMiddleware|TestLiteLLM|TestElasticsearch|TestQdrant' -count=1
 
 test-phase2-contract:
 	go test ./tests/integration -run 'TestGatewayStartupRejects|TestRAGFlowWithSplitKey|TestAPIKeyManagementLifecycle|TestProxyFlowWithSplitKey' -count=1
 
 test-phase2-race:
-	go test -race ./internal/config ./internal/api ./internal/middleware ./internal/services -run 'TestLoad|TestRAGSearchResponseStatus|TestRAGSearchHandlerStatusContract|TestRAGIndexHandlerContract|TestCreateAPIKey|TestListAPIKeys|TestUsageSummary|TestRevokeAPIKey|TestRotateAPIKey|TestRateLimitMiddleware|TestAdminMiddleware|TestAuthMiddleware|TestLiteLLM|TestElasticsearch|TestQdrant' -count=1
+	go test -race ./internal/config ./internal/api ./internal/middleware ./internal/services -run 'TestLoad|TestRAGSearchResponseStatus|TestRAGSearchHandlerStatusContract|TestRAGIndexHandlerContract|TestCreateAPIKey|TestListAPIKeys|TestUsageSummary|TestRevokeAPIKey|TestRotateAPIKey|TestManagementRouteAuthContract|TestRateLimitMiddleware|TestAdminMiddleware|TestAuthMiddleware|TestLiteLLM|TestElasticsearch|TestQdrant' -count=1
 
 test-phase2-runtime: smoke-gateway-local smoke-gateway-auth
 

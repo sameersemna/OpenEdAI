@@ -18,6 +18,8 @@
   - Backend outages fail tests instead of skipping
 
 ## Useful Commands
+- Phase 2 consolidated quality gate: `make test-phase2`
+  - Includes config, API contracts (RAG + management), middleware contracts, services contracts, integration contracts, and focused race checks.
 - Show matrix: `make ci-check-matrix`
 - Show local tool status: `make ci-local-status`
 - Governance quick check: `make governance-ci-fast`
@@ -66,6 +68,7 @@
 - Run artifact verifier self-test (includes expected failures): `make verify-governance-artifacts-selftest`
 - Startup validation only: `make test-startup-config`
 - Focused health contract: `make test-health-contract`
+- Focused management route auth contract: `go test ./internal/api -run 'TestManagementRouteAuthContract' -count=1`
 - Pre-push hook install (interactive): `make install-prepush-hook`
 - Pre-push hook install dry-run: `make install-prepush-hook-dry-run`
 - Pre-push hook install force: `make install-prepush-hook-force`
