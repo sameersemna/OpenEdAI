@@ -29,20 +29,24 @@ check_tcp() {
   timeout 1 bash -c "cat < /dev/null > /dev/tcp/${host}/${port}" >/dev/null 2>&1
 }
 
-print_status() {
-  local pg_status="down"
-  local redis_status="down"
-  local litellm_status="down"
+service_status() {
+  local host="$1"
+  local port="$2"
+  if check_tcp "$host" "$port"; then
+    echo "up"
+  else
+    echo "down"
+  fi
+}
 
-  if check_tcp "$postgres_host" "$postgres_port"; then
-    pg_status="up"
-  fi
-  if check_tcp "$redis_host" "$redis_port"; then
-    redis_status="up"
-  fi
-  if check_tcp "$litellm_host" "$litellm_port"; then
-    litellm_status="up"
-  fi
+print_status() {
+  local pg_status
+  local redis_status
+  local litellm_status
+
+  pg_status="$(service_status "$postgres_host" "$postgres_port")"
+  redis_status="$(service_status "$redis_host" "$redis_port")"
+  litellm_status="$(service_status "$litellm_host" "$litellm_port")"
 
   echo "[contracts][status] mode=${mode}"
   if [[ -n "${API_KEY_HASH_PEPPER:-}" ]]; then
@@ -53,6 +57,40 @@ print_status() {
   echo "[contracts][status] POSTGRES=${postgres_host}:${postgres_port} (${pg_status})"
   echo "[contracts][status] REDIS=${redis_host}:${redis_port} (${redis_status})"
   echo "[contracts][status] LITELLM=${litellm_host}:${litellm_port} (${litellm_status})"
+}
+
+print_status_json() {
+  local pg_status
+  local redis_status
+  local litellm_status
+  local pepper_status
+  local sourced_env="false"
+
+  pg_status="$(service_status "$postgres_host" "$postgres_port")"
+  redis_status="$(service_status "$redis_host" "$redis_port")"
+  litellm_status="$(service_status "$litellm_host" "$litellm_port")"
+
+  if [[ -n "${API_KEY_HASH_PEPPER:-}" ]]; then
+    pepper_status="set"
+  else
+    pepper_status="missing"
+  fi
+  if [[ "${AUTO_SOURCE_ENV:-0}" == "1" ]]; then
+    sourced_env="true"
+  fi
+
+  cat <<EOF
+{
+  "mode": "${mode}",
+  "auto_source_env": ${sourced_env},
+  "api_key_hash_pepper": "${pepper_status}",
+  "services": {
+    "postgres": {"host": "${postgres_host}", "port": ${postgres_port}, "status": "${pg_status}"},
+    "redis": {"host": "${redis_host}", "port": ${redis_port}, "status": "${redis_status}"},
+    "litellm": {"host": "${litellm_host}", "port": ${litellm_port}, "status": "${litellm_status}"}
+  }
+}
+EOF
 }
 
 warn_or_fail() {
@@ -67,6 +105,11 @@ warn_or_fail() {
 
 if [[ "$mode" == "status" ]]; then
   print_status
+  exit 0
+fi
+
+if [[ "$mode" == "status-json" ]]; then
+  print_status_json
   exit 0
 fi
 
