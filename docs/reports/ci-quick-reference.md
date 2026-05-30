@@ -25,6 +25,7 @@
 - Governance quick check: `make governance-ci-fast`
 - Fast parity: `make test-ci-fast`
 - Fast contract gate (health + management route + usage params): `make test-ci-fast-contracts`
+- Fast contract gate (strict backend mode): `make test-ci-fast-contracts-strict`
 - Fast parity + usage query-param contract checks: `make test-ci-fast-proxy-usage`
   - The sample `scripts/git-hooks/pre-push.example` uses this command before running `make test-proxy-gate-local`.
 - Strict parity: `make test-ci-strict`
@@ -82,6 +83,14 @@
 - RAG/API/middleware/services focused Phase 2 unit + race contracts: `make test-phase2-unit` and `make test-phase2-race`
 - Integration contracts (startup, rag, key lifecycle, proxy): `make test-phase2-contract`
 - Consolidated Phase 2 gate: `make test-phase2`
+
+## Contract Gate Selection
+| Goal | Command | Typical Use |
+| --- | --- | --- |
+| Fast baseline parity | `make test-ci-fast` | Quick local sanity before development pushes |
+| Fast contract coverage | `make test-ci-fast-contracts` | Pre-push contract confidence loop |
+| Fast contract coverage (strict backends) | `make test-ci-fast-contracts-strict` | Self-hosted/ready backend environments |
+| Full Phase 2 quality gate | `make test-phase2` | Release readiness and final validation |
 
 ## Optional Git Hook
 - Template: `scripts/git-hooks/pre-push.example`

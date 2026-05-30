@@ -4,8 +4,8 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-echo "[pre-push] Running fast CI parity + usage param checks..."
-make test-ci-fast-proxy-usage
+echo "[pre-push] Running fast contract gate checks..."
+make test-ci-fast-contracts
 
 echo "[pre-push] Running proxy local gate checks..."
 make test-proxy-gate-local
