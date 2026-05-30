@@ -5,6 +5,7 @@ repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
 python3 - <<'PY'
+import os
 import sys
 from pathlib import Path
 
@@ -21,7 +22,7 @@ SMOKE_WORKFLOWS = {
 }
 HELPER = Path('scripts/ci/workflow_artifact_manifest.sh')
 GOVERNANCE_CONVENTIONS_WORKFLOW = Path('.github/workflows/governance-workflow-conventions.yml')
-HEALTH_CONTRACT_WORKFLOW = Path('.github/workflows/health-contract.yml')
+HEALTH_CONTRACT_WORKFLOW = Path(os.getenv('FAST_CONTRACT_HEALTH_WORKFLOW_PATH', '.github/workflows/health-contract.yml'))
 FAST_CONTRACT_HEARTBEAT_WORKFLOW = Path('.github/workflows/fast-contract-governance-heartbeat.yml')
 FAST_CONTRACT_REQUIRED_ORDER = [
     'Capture contract environment status JSON',
@@ -350,6 +351,11 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: explicit expected signed artifact count assignment OK')
 
+            if 'FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=7' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing explicit FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=7 in manifest path assertion step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: explicit version-aware signed artifact count assignment OK')
+
             if 'make fast-contract-checksums-generate' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract checksum generation step')
             else:
@@ -396,6 +402,7 @@ else:
         run_blocks = '\n'.join(str(step.get('run', '')) for step in steps if isinstance(step, dict))
         for required in [
             'make verify-workflow-conventions',
+            'make verify-workflow-conventions-fast-contract-expected-count-selftest',
             'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',

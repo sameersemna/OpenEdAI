@@ -59,6 +59,7 @@
 - Fast contract artifact manifest path integrity assertion: `make fast-contract-artifact-manifest-assert-paths`
   - Enforces lexicographically sorted file paths and normalized/unique entries.
   - Supports explicit count lock: `FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=<n> make fast-contract-artifact-manifest-assert-paths`.
+  - Supports version-aware count map: `FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=7,v2=8 make fast-contract-artifact-manifest-assert-paths`.
 - Fast contract artifact manifest path integrity assertion self-test: `make fast-contract-artifact-manifest-assert-paths-selftest`
 - Fast contract artifact checksum generation: `make fast-contract-checksums-generate FAST_CONTRACT_REPORT=docs/reports/<report>.md`
 - Fast contract artifact checksum verification: `make fast-contract-checksums-verify`
@@ -108,7 +109,7 @@
   - Optional age limits: `MAX_STANDARD_AGE_DAYS` and `MAX_AUTH_AGE_DAYS` (`-1` disables age checks).
 - Emit JSON-only report inventory policy status: `make report-prune-assert-json`
 - Verify governance workflow conventions: `make verify-workflow-conventions`
-- Verify a downloaded governance artifact bundle: `make verify-governance-artifacts ARTIFACT_DIR=/path/to/artifacts [BUNDLE_MODE=auto|smoke|selftest]`
+- Verify expected-count workflow conventions negative fixture: `make verify-workflow-conventions-fast-contract-expected-count-selftest`
 - Run artifact verifier self-test (includes expected failures): `make verify-governance-artifacts-selftest`
 - Startup validation only: `make test-startup-config`
 - Focused health contract: `make test-health-contract`

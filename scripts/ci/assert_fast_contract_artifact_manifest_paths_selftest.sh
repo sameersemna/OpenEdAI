@@ -25,6 +25,7 @@ EOF
 
 bash "$assertor" "$valid_json"
 FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=3 bash "$assertor" "$valid_json"
+FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=3 bash "$assertor" "$valid_json"
 
 invalid_non_normalized="${tmp_dir}/invalid-non-normalized.json"
 cat >"$invalid_non_normalized" <<'EOF'
@@ -109,6 +110,26 @@ set -e
 
 if [[ "$rc" == "0" ]]; then
   echo "[contracts][fail] manifest path assertor should reject unexpected signed artifact count" >&2
+  exit 1
+fi
+
+set +e
+FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=4 bash "$assertor" "$valid_json" >/dev/null 2>&1
+rc=$?
+set -e
+
+if [[ "$rc" == "0" ]]; then
+  echo "[contracts][fail] manifest path assertor should reject version-mapped signed artifact count mismatch" >&2
+  exit 1
+fi
+
+set +e
+FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v2=3 bash "$assertor" "$valid_json" >/dev/null 2>&1
+rc=$?
+set -e
+
+if [[ "$rc" == "0" ]]; then
+  echo "[contracts][fail] manifest path assertor should reject missing manifest version in version map" >&2
   exit 1
 fi
 
