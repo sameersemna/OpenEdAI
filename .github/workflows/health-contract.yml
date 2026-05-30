@@ -109,6 +109,9 @@ jobs:
       - name: Validate fast contract artifact verifier behavior
         run: make fast-contract-artifacts-verify-selftest
 
+      - name: Assert fast contract gate manifest conformance
+        run: make fast-contract-gate-manifest-assert
+
       - name: Verify fast contract artifacts before upload
         run: |
           make fast-contract-artifacts-verify \

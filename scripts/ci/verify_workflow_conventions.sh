@@ -44,6 +44,7 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract gate verdict JSON validator behavior',
     'Validate fast contract gate verdict behavior',
     'Validate fast contract artifact verifier behavior',
+    'Assert fast contract gate manifest conformance',
     'Verify fast contract artifacts before upload',
     'Upload fast contract report artifact',
     'Append fast contract summary',
@@ -239,6 +240,11 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract artifact verifier selftest OK')
 
+            if 'make fast-contract-gate-manifest-assert' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract gate manifest assertion step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract gate manifest assertion step OK')
+
             if 'make fast-contract-artifacts-verify' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verification step')
             else:
@@ -270,6 +276,7 @@ else:
             'make fast-contract-trend-validate-selftest',
             'make fast-contract-gate-verdict-validate-selftest',
             'make fast-contract-artifacts-verify-selftest',
+            'make fast-contract-gate-manifest-assert',
         ]:
             if required not in run_blocks:
                 errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: missing required run command "{required}"')

@@ -41,6 +41,9 @@ jobs:
       - name: Validate fast contract artifact verifier behavior
         run: make fast-contract-artifacts-verify-selftest
 
+      - name: Assert fast contract gate manifest conformance
+        run: make fast-contract-gate-manifest-assert
+
       - name: Run strict-local checks (optional)
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_strict_local_checks == 'true' }}
         run: make test-ci-fast-contracts-strict-local
