@@ -28,6 +28,35 @@ jobs:
       - name: Run fast CI health contract checks
         run: make test-ci-fast
 
+  fast-contract-gate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run fast contract gate report
+        run: make test-ci-fast-contracts-report
+
+      - name: Resolve latest fast contract report path
+        id: report
+        run: |
+          latest_report=$(ls -1t docs/reports/*-fast-contract-gate-report.md | head -1)
+          echo "path=${latest_report}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload fast contract report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-contract-gate-report
+          path: ${{ steps.report.outputs.path }}
+          if-no-files-found: error
+          retention-days: 14
+
   health-contract-strict:
     if: ${{ vars.RUN_STRICT_BACKEND_TESTS == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_strict_backends == 'true') }}
     runs-on: ubuntu-latest

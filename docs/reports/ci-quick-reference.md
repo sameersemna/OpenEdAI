@@ -73,6 +73,7 @@
 - Startup validation only: `make test-startup-config`
 - Focused health contract: `make test-health-contract`
 - Focused management route contracts (auth + read-only store errors): `make test-management-route-contract`
+- Contract environment status snapshot: `make contract-env-status`
 - Pre-push hook install (interactive): `make install-prepush-hook`
 - Pre-push hook install dry-run: `make install-prepush-hook-dry-run`
 - Pre-push hook install force: `make install-prepush-hook-force`
@@ -101,6 +102,7 @@
 - Set `FAST_CONTRACTS_REQUIRE_INTEGRATION_ENV=1` to make missing integration env fail fast.
 - Sample pre-push hook contract mode can be changed with `PRE_PUSH_CONTRACT_MODE=fast|strict|strict-local` (default `fast`).
 - Strict fast-contract gate also requires reachable local integration backends (notably Postgres for proxy usage-parameter contract tests).
+- Set `AUTO_SOURCE_ENV=1` to auto-source `.env` before contract environment checks (useful for local shells).
 
 ## Interpreting Skips vs Fails
 - A `SKIP` in focused integration contracts usually indicates missing optional local prerequisites (for example `API_KEY_HASH_PEPPER` in non-strict fast mode).
