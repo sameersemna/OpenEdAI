@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -79,5 +80,40 @@ func seedUsageLog(t *testing.T, ctx context.Context, pool *pgxpool.Pool, apiKeyI
 		VALUES($1, $2, $3, $4, $5, $6, $7, $8, FALSE, $9, $10)
 	`, uuid.NewString(), apiKeyID, requestID, "/v1/chat/completions", "gpt-3.5-turbo", promptTokens, completionTokens, promptTokens+completionTokens, statusCode, latencyMS); err != nil {
 		t.Fatalf("seed usage log (%s): %v", requestID, err)
+	}
+}
+
+func seedUsageLogAt(t *testing.T, ctx context.Context, pool *pgxpool.Pool, apiKeyID string, requestID string, promptTokens int, completionTokens int, statusCode int, latencyMS int, createdAt time.Time) {
+	t.Helper()
+
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO usage_logs(id, api_key_id, request_id, endpoint, model, prompt_tokens, completion_tokens, total_tokens, estimated_tokens, status_code, latency_ms, created_at)
+		VALUES($1, $2, $3, $4, $5, $6, $7, $8, FALSE, $9, $10, $11)
+	`, uuid.NewString(), apiKeyID, requestID, "/v1/chat/completions", "gpt-3.5-turbo", promptTokens, completionTokens, promptTokens+completionTokens, statusCode, latencyMS, createdAt); err != nil {
+		t.Fatalf("seed usage log at (%s): %v", requestID, err)
+	}
+}
+
+func assertErrorEnvelope(t *testing.T, raw []byte, expectedMessage string, expectedType string, expectedCode string) {
+	t.Helper()
+
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatalf("decode error envelope: %v; body=%s", err, string(raw))
+	}
+
+	errObj, ok := payload["error"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected error object in response, body=%s", string(raw))
+	}
+
+	if expectedMessage != "" && errObj["message"] != expectedMessage {
+		t.Fatalf("expected error message %q, got %#v", expectedMessage, errObj["message"])
+	}
+	if expectedType != "" && errObj["type"] != expectedType {
+		t.Fatalf("expected error type %q, got %#v", expectedType, errObj["type"])
+	}
+	if expectedCode != "" && errObj["code"] != expectedCode {
+		t.Fatalf("expected error code %q, got %#v", expectedCode, errObj["code"])
 	}
 }

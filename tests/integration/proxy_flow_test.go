@@ -46,6 +46,7 @@ func TestProxyFlowWithSplitKey(t *testing.T) {
 		}`)
 		status, raw := doJSONRequest(t, "POST", baseURL+"/v1/chat/completions", splitKey, body)
 		if status == http.StatusBadGateway {
+			assertErrorEnvelope(t, raw, "Upstream LiteLLM unavailable", "service_unavailable", "litellm_unavailable")
 			backendUnavailable(t, "LiteLLM upstream unavailable")
 		}
 		if status == http.StatusBadRequest {
@@ -72,6 +73,7 @@ func TestProxyFlowWithSplitKey(t *testing.T) {
 		}`)
 		status, raw := doJSONRequest(t, "POST", baseURL+"/v1/completions", splitKey, body)
 		if status == http.StatusBadGateway {
+			assertErrorEnvelope(t, raw, "Upstream LiteLLM unavailable", "service_unavailable", "litellm_unavailable")
 			backendUnavailable(t, "LiteLLM upstream unavailable")
 		}
 		if status == http.StatusBadRequest {
@@ -121,6 +123,7 @@ func TestProxyFlowWithSplitKey(t *testing.T) {
 		if status != http.StatusForbidden {
 			t.Fatalf("non-admin cross-key usage status = %d, want 403, body = %s", status, string(raw))
 		}
+		assertErrorEnvelope(t, raw, "Admin privileges required", "forbidden_error", "")
 
 		status, raw = doJSONRequest(t, "GET", baseURL+"/v1/management/usage?api_key_id="+otherID, adminKey, nil)
 		if status != http.StatusOK {
@@ -590,22 +593,48 @@ func TestProxyFlowWithSplitKey(t *testing.T) {
 		assertUsageRecentLenForProxyFlow(t, recent, 20, "high-hours malformed-limit text variant default limit fallback")
 	})
 
+	t.Run("usage_summary_time_window_boundary_validation", func(t *testing.T) {
+		boundaryID, boundaryKey := createTempSplitKey(t, ctx, pool, pepper, "it-usage-time-window-boundary")
+
+		seedUsageLogAt(t, ctx, pool, boundaryID, "req-it-usage-time-window-old", 10, 5, http.StatusOK, 20, time.Now().UTC().Add(-25*time.Hour))
+		seedUsageLogAt(t, ctx, pool, boundaryID, "req-it-usage-time-window-new", 4, 3, http.StatusOK, 15, time.Now().UTC().Add(-1*time.Hour))
+
+		resp, window, recent := doUsageRequestAndDecodeForProxyFlow(t, baseURL, boundaryKey, "hours=24&limit=10")
+		assertUsageWindowHoursForProxyFlow(t, window, 24, "time-window boundary hours=24")
+		if len(recent) != 2 {
+			t.Fatalf("recent length for time-window boundary = %d, want 2", len(recent))
+		}
+
+		summary, ok := resp["summary"].(map[string]any)
+		if !ok {
+			t.Fatalf("summary missing for time-window boundary response: %+v", resp)
+		}
+		if int(summary["request_count"].(float64)) != 1 {
+			t.Fatalf("request_count for time-window boundary = %v, want 1", summary["request_count"])
+		}
+		if int(summary["total_tokens"].(float64)) != 7 {
+			t.Fatalf("total_tokens for time-window boundary = %v, want 7", summary["total_tokens"])
+		}
+	})
+
 	t.Run("invalid_key_rejected", func(t *testing.T) {
 		invalidKey := "sk_ed_" + uuid.NewString() + ".invalid"
-		status, _ := doJSONRequest(t, "GET", baseURL+"/v1/management/usage", invalidKey, nil)
+		status, raw := doJSONRequest(t, "GET", baseURL+"/v1/management/usage", invalidKey, nil)
 		if status != http.StatusUnauthorized {
 			t.Fatalf("invalid key should be rejected with 401, got %d", status)
 		}
+		assertErrorEnvelope(t, raw, "Invalid API key", "invalid_request_error", "")
 	})
 
 	t.Run("expired_key_rejected", func(t *testing.T) {
 		pastTime := time.Now().UTC().Add(-1 * time.Hour)
 		_, expiredKey := createTempSplitKeyWithAdvancedOptions(t, ctx, pool, pepper, "it-expired-test", false, 180, &pastTime)
 
-		status, _ := doJSONRequest(t, "GET", baseURL+"/v1/management/usage", expiredKey, nil)
+		status, raw := doJSONRequest(t, "GET", baseURL+"/v1/management/usage", expiredKey, nil)
 		if status != http.StatusUnauthorized {
 			t.Fatalf("expired key should be rejected with 401, got %d", status)
 		}
+		assertErrorEnvelope(t, raw, "Invalid API key", "invalid_request_error", "")
 	})
 }
 
