@@ -1,4 +1,4 @@
-.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-proxy-flow-contract test-proxy-usage-params-contract test-ci-fast-proxy-usage test-prepush-local test-proxy-operational test-proxy-quick-local test-proxy-gate-local test-proxy-operational-flake test-race bench-health bench-api-errors bench-middleware bench-assert bench-assert-stable bench-assert-json bench-compare-json bench-compare-self test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
+.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-proxy-flow-contract test-proxy-usage-params-contract test-ci-fast-proxy-usage test-prepush-local test-proxy-operational test-proxy-quick-local test-proxy-gate-local test-proxy-operational-flake test-race test-phase2-unit test-phase2-contract test-phase2-race test-phase2-runtime test-phase2 bench-health bench-api-errors bench-middleware bench-assert bench-assert-stable bench-assert-json bench-compare-json bench-compare-self test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
 
 tidy:
 	go mod tidy
@@ -25,11 +25,24 @@ test-integration-strict:
 	INTEGRATION_STRICT_BACKENDS=1 go test ./tests/integration -count=1
 
 test-startup-config:
-	go test ./tests/integration -run TestGatewayStartupRejectsNegativeHealthDegradedLatency -count=1
+	go test ./tests/integration -run 'TestGatewayStartupRejectsNegativeHealthDegradedLatency|TestGatewayStartupRejectsUnsafeDefaultPepperInStrictMode' -count=1
 
 test-health-contract:
-	go test ./internal/config -run 'TestLoadRejectsNegativeHealthDegradedLatency|TestLoadFallsBackForMalformedHealthDegradedLatency' -count=1
+	go test ./internal/config -run 'TestLoadRejectsNegativeHealthDegradedLatency|TestLoadFallsBackForMalformedHealthDegradedLatency|TestLoadStrictValidationRejectsUnsafeDefaultPepper|TestLoadRejectsMalformedServiceURLs|TestLoadRejectsNonPositiveRequestTimeout' -count=1
 	go test ./tests/integration -run 'TestHealthzContract|TestGatewayStartupRejectsNegativeHealthDegradedLatency|TestIntegrationStrictBackends' -count=1
+
+test-phase2-unit:
+	go test ./internal/config ./internal/api ./internal/middleware ./internal/services -run 'TestLoad|TestRAGSearchResponseStatus|TestRAGSearchHandlerStatusContract|TestRAGIndexHandlerContract|TestRAGBackendError|TestCreateAPIKey|TestListAPIKeys|TestUsageSummary|TestRevokeAPIKey|TestRotateAPIKey|TestRateLimitMiddleware|TestAdminMiddleware|TestAuthMiddleware|TestLiteLLM|TestElasticsearch|TestQdrant' -count=1
+
+test-phase2-contract:
+	go test ./tests/integration -run 'TestGatewayStartupRejects|TestRAGFlowWithSplitKey|TestAPIKeyManagementLifecycle|TestProxyFlowWithSplitKey' -count=1
+
+test-phase2-race:
+	go test -race ./internal/config ./internal/api ./internal/middleware ./internal/services -run 'TestLoad|TestRAGSearchResponseStatus|TestRAGSearchHandlerStatusContract|TestRAGIndexHandlerContract|TestCreateAPIKey|TestListAPIKeys|TestUsageSummary|TestRevokeAPIKey|TestRotateAPIKey|TestRateLimitMiddleware|TestAdminMiddleware|TestAuthMiddleware|TestLiteLLM|TestElasticsearch|TestQdrant' -count=1
+
+test-phase2-runtime: smoke-gateway-local smoke-gateway-auth
+
+test-phase2: test-phase2-unit test-phase2-contract test-phase2-race
 
 test-proxy-flow-contract:
 	go test ./tests/integration -run TestProxyFlowWithSplitKey -count=1 -v
