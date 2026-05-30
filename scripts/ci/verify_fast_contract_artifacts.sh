@@ -36,6 +36,7 @@ FAST_CONTRACT_CONSISTENCY_WRITE=0 bash "$repo_root/scripts/ci/validate_fast_cont
 bash "$repo_root/scripts/ci/validate_fast_contract_consistency_json.sh" "$consistency_json"
 bash "$repo_root/scripts/ci/validate_fast_contract_consistency_kpi_json.sh" "$kpi_json"
 bash "$repo_root/scripts/ci/validate_fast_contract_artifact_manifest.sh" "$manifest_path"
+bash "$repo_root/scripts/ci/assert_fast_contract_artifact_manifest_paths.sh" "$manifest_path"
 bash "$repo_root/scripts/ci/verify_fast_contract_checksums.sh" "$checksums_path" "$manifest_path"
 
 echo "[contracts][ok] verified fast contract artifacts for upload"

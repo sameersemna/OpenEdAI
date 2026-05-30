@@ -59,8 +59,14 @@ jobs:
       - name: Validate fast contract artifact manifest validator behavior
         run: make fast-contract-artifact-manifest-validate-selftest
 
+      - name: Validate fast contract artifact manifest path assertion behavior
+        run: make fast-contract-artifact-manifest-assert-paths-selftest
+
       - name: Validate fast contract checksum verifier behavior
         run: make fast-contract-checksums-verify-selftest
+
+      - name: Validate fast contract checksum tamper-detection behavior
+        run: make fast-contract-checksums-tamper-selftest
 
       - name: Validate fast contract gate manifest assertion behavior
         run: make fast-contract-gate-manifest-assert-selftest

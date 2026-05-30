@@ -37,9 +37,12 @@
     "Generate fast contract artifact manifest JSON",
     "Validate fast contract artifact manifest JSON",
     "Validate fast contract artifact manifest validator behavior",
+    "Validate fast contract artifact manifest path assertion behavior",
+    "Assert fast contract artifact manifest path integrity",
     "Generate fast contract artifact checksums",
     "Verify fast contract artifact checksums",
     "Validate fast contract checksum verifier behavior",
+    "Validate fast contract checksum tamper-detection behavior",
     "Verify fast contract artifacts before upload",
     "Upload fast contract report artifact",
     "Append fast contract summary"
@@ -74,9 +77,12 @@
     "make fast-contract-artifact-manifest-generate",
     "make fast-contract-artifact-manifest-validate",
     "make fast-contract-artifact-manifest-validate-selftest",
+    "make fast-contract-artifact-manifest-assert-paths-selftest",
+    "make fast-contract-artifact-manifest-assert-paths",
     "make fast-contract-checksums-generate",
     "make fast-contract-checksums-verify",
     "make fast-contract-checksums-verify-selftest",
+    "make fast-contract-checksums-tamper-selftest",
     "make fast-contract-artifacts-verify"
   ]
 }

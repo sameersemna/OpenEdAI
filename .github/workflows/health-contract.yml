@@ -154,6 +154,12 @@ jobs:
       - name: Validate fast contract artifact manifest validator behavior
         run: make fast-contract-artifact-manifest-validate-selftest
 
+      - name: Validate fast contract artifact manifest path assertion behavior
+        run: make fast-contract-artifact-manifest-assert-paths-selftest
+
+      - name: Assert fast contract artifact manifest path integrity
+        run: make fast-contract-artifact-manifest-assert-paths FAST_CONTRACT_ARTIFACT_MANIFEST=artifacts/contracts/fast-contract-artifact-manifest.json
+
       - name: Generate fast contract artifact checksums
         run: make fast-contract-checksums-generate FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json FAST_CONTRACT_CHECKSUMS=artifacts/contracts/sha256sums.txt FAST_CONTRACT_ARTIFACT_MANIFEST=artifacts/contracts/fast-contract-artifact-manifest.json
 
@@ -162,6 +168,9 @@ jobs:
 
       - name: Validate fast contract checksum verifier behavior
         run: make fast-contract-checksums-verify-selftest
+
+      - name: Validate fast contract checksum tamper-detection behavior
+        run: make fast-contract-checksums-tamper-selftest
 
       - name: Verify fast contract artifacts before upload
         run: |

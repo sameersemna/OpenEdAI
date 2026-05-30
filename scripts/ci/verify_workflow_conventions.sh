@@ -59,9 +59,12 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Generate fast contract artifact manifest JSON',
     'Validate fast contract artifact manifest JSON',
     'Validate fast contract artifact manifest validator behavior',
+    'Validate fast contract artifact manifest path assertion behavior',
+    'Assert fast contract artifact manifest path integrity',
     'Generate fast contract artifact checksums',
     'Verify fast contract artifact checksums',
     'Validate fast contract checksum verifier behavior',
+    'Validate fast contract checksum tamper-detection behavior',
     'Verify fast contract artifacts before upload',
     'Upload fast contract report artifact',
     'Append fast contract summary',
@@ -332,6 +335,16 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract artifact manifest validator selftest OK')
 
+            if 'make fast-contract-artifact-manifest-assert-paths-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest path assertion selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract artifact manifest path assertion selftest OK')
+
+            if 'make fast-contract-artifact-manifest-assert-paths' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest path assertion step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract artifact manifest path assertion OK')
+
             if 'make fast-contract-checksums-generate' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract checksum generation step')
             else:
@@ -346,6 +359,11 @@ else:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract checksum verifier selftest step')
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract checksum verifier selftest OK')
+
+            if 'make fast-contract-checksums-tamper-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract checksum tamper selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract checksum tamper selftest OK')
 
             if 'make fast-contract-artifacts-verify' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verification step')
@@ -384,7 +402,9 @@ else:
             'make fast-contract-consistency-kpi-validate-selftest',
             'make fast-contract-consistency-kpi-assert-selftest',
             'make fast-contract-artifact-manifest-validate-selftest',
+            'make fast-contract-artifact-manifest-assert-paths-selftest',
             'make fast-contract-checksums-verify-selftest',
+            'make fast-contract-checksums-tamper-selftest',
             'make fast-contract-gate-manifest-assert-selftest',
             'make fast-contract-gate-manifest-assert',
         ]:
