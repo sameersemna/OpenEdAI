@@ -24,6 +24,7 @@
 - Show local tool status: `make ci-local-status`
 - Governance quick check: `make governance-ci-fast`
 - Fast parity: `make test-ci-fast`
+- Fast contract gate (health + management route + usage params): `make test-ci-fast-contracts`
 - Fast parity + usage query-param contract checks: `make test-ci-fast-proxy-usage`
   - The sample `scripts/git-hooks/pre-push.example` uses this command before running `make test-proxy-gate-local`.
 - Strict parity: `make test-ci-strict`
@@ -74,6 +75,13 @@
 - Pre-push hook install force: `make install-prepush-hook-force`
 - Script lint: `make shellcheck-scripts`
 - Install shellcheck on Debian/Ubuntu: `make install-shellcheck-linux`
+
+## Phase 2 Contract Coverage Map
+- Config + startup contract checks: `make test-health-contract`
+- Management route contracts (auth topology + read-only store failure envelopes): `make test-management-route-contract`
+- RAG/API/middleware/services focused Phase 2 unit + race contracts: `make test-phase2-unit` and `make test-phase2-race`
+- Integration contracts (startup, rag, key lifecycle, proxy): `make test-phase2-contract`
+- Consolidated Phase 2 gate: `make test-phase2`
 
 ## Optional Git Hook
 - Template: `scripts/git-hooks/pre-push.example`
