@@ -45,6 +45,9 @@ jobs:
           mkdir -p artifacts/contracts
           make contract-env-status-json > artifacts/contracts/contract-env-status.json
 
+      - name: Validate contract environment checker behavior
+        run: make contract-env-selftest
+
       - name: Run fast contract gate report
         run: make test-ci-fast-contracts-report
 

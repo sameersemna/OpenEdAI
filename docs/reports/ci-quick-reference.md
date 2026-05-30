@@ -109,7 +109,7 @@
 
 ## PR Gate Coverage
 - The `health-contract-fast` workflow job runs `make test-ci-fast` for baseline health/startup contract parity.
-- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, runs `make test-ci-fast-contracts-report`, uploads both artifacts, and appends a step summary with JSON status.
+- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, uploads both artifacts, and appends a step summary with JSON status.
 - Strict backend checks remain in `health-contract-strict` and run when explicitly enabled via workflow dispatch or repository variable.
 
 ## Recommended Local Sequence
