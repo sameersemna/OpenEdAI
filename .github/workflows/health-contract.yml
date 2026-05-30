@@ -63,6 +63,12 @@ jobs:
           latest_report=$(ls -1t docs/reports/*-fast-contract-gate-report.md | head -1)
           echo "path=${latest_report}" >> "$GITHUB_OUTPUT"
 
+      - name: Validate fast contract report markdown
+        run: make fast-contract-report-validate-markdown FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}"
+
+      - name: Validate fast contract report markdown validator behavior
+        run: make fast-contract-report-validate-selftest
+
       - name: Generate fast contract status summary JSON
         run: |
           make fast-contract-status-summary \

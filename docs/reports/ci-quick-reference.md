@@ -28,6 +28,8 @@
 - Fast contract gate (strict backend mode): `make test-ci-fast-contracts-strict`
 - Fast contract gate (strict + local backend reachability checks): `make test-ci-fast-contracts-strict-local`
 - Fast contract gate with report artifact output: `make test-ci-fast-contracts-report`
+- Fast contract report markdown validation: `make fast-contract-report-validate-markdown FAST_CONTRACT_REPORT=docs/reports/<report>.md`
+- Fast contract report markdown validator self-test: `make fast-contract-report-validate-selftest`
 - Fast contract gate status summary artifact generation: `make fast-contract-status-summary`
 - Fast contract status summary JSON validation: `make fast-contract-status-validate-json`
 - Fast contract status summary validator self-test: `make fast-contract-status-validate-selftest`
@@ -128,7 +130,7 @@
 
 ## PR Gate Coverage
 - The `health-contract-fast` workflow job runs `make test-ci-fast` for baseline health/startup contract parity.
-- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, validates JSON shape with `make contract-env-validate-json`, runs `make contract-env-validate-selftest`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, generates `make fast-contract-status-summary`, validates summary shape with `make fast-contract-status-validate-json`, runs `make fast-contract-status-validate-selftest`, generates `make fast-contract-trend-json`, validates trend shape with `make fast-contract-trend-validate-json`, asserts thresholds with `make fast-contract-trend-assert`, generates verdict with `make fast-contract-gate-verdict`, validates verdict shape with `make fast-contract-gate-verdict-validate-json`, runs `make fast-contract-trend-validate-selftest`, runs `make fast-contract-gate-verdict-validate-selftest`, runs `make fast-contract-gate-verdict-selftest`, runs `make fast-contract-artifacts-verify-selftest`, verifies all fast-gate artifacts with `make fast-contract-artifacts-verify`, uploads all fast-gate artifacts, and appends a step summary with status/summary/trend/verdict JSON payloads.
+- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, validates JSON shape with `make contract-env-validate-json`, runs `make contract-env-validate-selftest`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, validates report markdown contract with `make fast-contract-report-validate-markdown`, runs `make fast-contract-report-validate-selftest`, generates `make fast-contract-status-summary`, validates summary shape with `make fast-contract-status-validate-json`, runs `make fast-contract-status-validate-selftest`, generates `make fast-contract-trend-json`, validates trend shape with `make fast-contract-trend-validate-json`, asserts thresholds with `make fast-contract-trend-assert`, generates verdict with `make fast-contract-gate-verdict`, validates verdict shape with `make fast-contract-gate-verdict-validate-json`, runs `make fast-contract-trend-validate-selftest`, runs `make fast-contract-gate-verdict-validate-selftest`, runs `make fast-contract-gate-verdict-selftest`, runs `make fast-contract-artifacts-verify-selftest`, verifies all fast-gate artifacts with `make fast-contract-artifacts-verify`, uploads all fast-gate artifacts, and appends a step summary with status/summary/trend/verdict JSON payloads.
 - Strict backend checks remain in `health-contract-strict` and run when explicitly enabled via workflow dispatch or repository variable.
 
 ## Recommended Local Sequence
@@ -203,6 +205,7 @@
   - Runs weekly and on manual dispatch.
   - Executes lightweight governance checks for fast-contract CI automation:
     - `make verify-workflow-conventions`
+    - `make fast-contract-report-validate-selftest`
     - `make fast-contract-status-validate-selftest`
     - `make fast-contract-trend-validate-selftest`
     - `make fast-contract-gate-verdict-validate-selftest`

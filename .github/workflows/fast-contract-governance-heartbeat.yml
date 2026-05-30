@@ -26,6 +26,9 @@ jobs:
       - name: Verify workflow conventions
         run: make verify-workflow-conventions
 
+      - name: Validate fast contract report markdown validator behavior
+        run: make fast-contract-report-validate-selftest
+
       - name: Validate fast contract status summary validator behavior
         run: make fast-contract-status-validate-selftest
 

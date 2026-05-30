@@ -30,6 +30,8 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate contract environment checker behavior',
     'Run fast contract gate report',
     'Resolve latest fast contract report path',
+    'Validate fast contract report markdown',
+    'Validate fast contract report markdown validator behavior',
     'Generate fast contract status summary JSON',
     'Validate fast contract status summary JSON',
     'Validate fast contract status summary validator behavior',
@@ -172,6 +174,16 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract status summary generation OK')
 
+            if 'make fast-contract-report-validate-markdown' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract report markdown validation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract report markdown validation OK')
+
+            if 'make fast-contract-report-validate-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract report markdown validator selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract report markdown validator selftest OK')
+
             if 'make fast-contract-status-validate-json' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract status summary json validation step')
             else:
@@ -253,6 +265,7 @@ else:
         run_blocks = '\n'.join(str(step.get('run', '')) for step in steps if isinstance(step, dict))
         for required in [
             'make verify-workflow-conventions',
+            'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',
             'make fast-contract-gate-verdict-validate-selftest',

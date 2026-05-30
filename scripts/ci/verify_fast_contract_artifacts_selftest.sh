@@ -15,10 +15,15 @@ trend_json="${tmp_dir}/fast-contract-trend.json"
 verdict_json="${tmp_dir}/fast-contract-gate-verdict.json"
 
 cat >"$report_ok" <<'EOF'
-# Fast Contract Gate Report (synthetic)
+# Fast Contract Gate Report (20260530-230000)
 
 - Status: PASS
 - Command: make test-ci-fast-contracts
+
+## Output
+```text
+ok
+```
 EOF
 
 cat >"$contract_json" <<'EOF'
@@ -93,7 +98,7 @@ bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$v
 
 report_bad="${tmp_dir}/bad-fast-contract-gate-report.md"
 cat >"$report_bad" <<'EOF'
-# Fast Contract Gate Report (synthetic)
+# Fast Contract Gate Report (20260530-230000)
 
 - Command: make test-ci-fast-contracts
 EOF
@@ -105,6 +110,29 @@ set -e
 
 if [[ "$rc" == "0" ]]; then
   echo "[contracts][fail] artifact verifier should fail when report status line is missing" >&2
+  exit 1
+fi
+
+report_bad_command="${tmp_dir}/bad-command-fast-contract-gate-report.md"
+cat >"$report_bad_command" <<'EOF'
+# Fast Contract Gate Report (20260530-230000)
+
+- Status: PASS
+- Command: make test-ci-fast
+
+## Output
+```text
+ok
+```
+EOF
+
+set +e
+bash "$verifier" "$report_bad_command" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" >/dev/null 2>&1
+rc=$?
+set -e
+
+if [[ "$rc" == "0" ]]; then
+  echo "[contracts][fail] artifact verifier should fail when report command line is invalid" >&2
   exit 1
 fi
 

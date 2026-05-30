@@ -22,10 +22,7 @@ for artifact in "$contract_json" "$summary_json" "$trend_json" "$verdict_json"; 
   fi
 done
 
-if ! grep -Eq '^- Status:[[:space:]]*(PASS|FAIL)$' "$report_path"; then
-  echo "[contracts][fail] report missing required status line: $report_path" >&2
-  exit 1
-fi
+bash "$repo_root/scripts/ci/validate_fast_contract_report_markdown.sh" "$report_path"
 
 bash "$repo_root/scripts/ci/validate_contract_env_status_json.sh" "$contract_json"
 bash "$repo_root/scripts/ci/validate_fast_contract_status_summary_json.sh" "$summary_json"
