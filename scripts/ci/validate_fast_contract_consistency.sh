@@ -6,6 +6,7 @@ summary_json="${2:-${FAST_CONTRACT_STATUS_SUMMARY:-artifacts/contracts/fast-cont
 trend_json="${3:-${FAST_CONTRACT_TREND_JSON:-artifacts/contracts/fast-contract-trend.json}}"
 verdict_json="${4:-${FAST_CONTRACT_VERDICT_JSON:-artifacts/contracts/fast-contract-gate-verdict.json}}"
 consistency_json="${5:-${FAST_CONTRACT_CONSISTENCY_JSON:-artifacts/contracts/fast-contract-consistency-status.json}}"
+consistency_write="${FAST_CONTRACT_CONSISTENCY_WRITE:-1}"
 
 if [[ -z "$report_path" || ! -f "$report_path" ]]; then
   echo "[contracts][fail] fast contract report not found: ${report_path:-<empty>}" >&2
@@ -18,13 +19,13 @@ for path in "$summary_json" "$trend_json" "$verdict_json"; do
   fi
 done
 
-python3 - "$report_path" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" <<'PY'
+python3 - "$report_path" "$summary_json" "$trend_json" "$verdict_json" "$consistency_json" "$consistency_write" <<'PY'
 import json
 import re
 import sys
 from datetime import datetime, timezone
 
-report_path, summary_path, trend_path, verdict_path, consistency_path = sys.argv[1:6]
+report_path, summary_path, trend_path, verdict_path, consistency_path, consistency_write = sys.argv[1:7]
 
 with open(report_path, "r", encoding="utf-8") as f:
     report_text = f.read()
@@ -119,11 +120,15 @@ payload = {
     },
 }
 
-with open(consistency_path, "w", encoding="utf-8") as f:
-    json.dump(payload, f, separators=(",", ":"))
+if consistency_write == "1":
+    with open(consistency_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, separators=(",", ":"))
 
 if consistency_overall != "PASS":
     raise SystemExit("[contracts][fail] fast contract cross-artifact consistency failed")
 
-print(f"[contracts][ok] validated fast contract cross-artifact consistency: {consistency_path}")
+if consistency_write == "1":
+    print(f"[contracts][ok] validated fast contract cross-artifact consistency: {consistency_path}")
+else:
+    print(f"[contracts][ok] validated fast contract cross-artifact consistency (read-only): {consistency_path}")
 PY

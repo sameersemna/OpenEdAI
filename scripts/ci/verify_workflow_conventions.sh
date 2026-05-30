@@ -56,6 +56,9 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract consistency KPI JSON validator behavior',
     'Assert fast contract consistency KPI thresholds',
     'Validate fast contract consistency KPI assertor behavior',
+    'Generate fast contract artifact checksums',
+    'Verify fast contract artifact checksums',
+    'Validate fast contract checksum verifier behavior',
     'Verify fast contract artifacts before upload',
     'Upload fast contract report artifact',
     'Append fast contract summary',
@@ -311,6 +314,21 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract consistency kpi assertor selftest OK')
 
+            if 'make fast-contract-checksums-generate' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract checksum generation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract checksum generation OK')
+
+            if 'make fast-contract-checksums-verify' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract checksum verification step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract checksum verification OK')
+
+            if 'make fast-contract-checksums-verify-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract checksum verifier selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract checksum verifier selftest OK')
+
             if 'make fast-contract-artifacts-verify' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verification step')
             else:
@@ -347,6 +365,7 @@ else:
             'make fast-contract-consistency-reason-codes-selftest',
             'make fast-contract-consistency-kpi-validate-selftest',
             'make fast-contract-consistency-kpi-assert-selftest',
+            'make fast-contract-checksums-verify-selftest',
             'make fast-contract-gate-manifest-assert-selftest',
             'make fast-contract-gate-manifest-assert',
         ]:

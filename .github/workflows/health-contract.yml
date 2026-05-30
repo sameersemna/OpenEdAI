@@ -145,6 +145,15 @@ jobs:
       - name: Validate fast contract consistency KPI assertor behavior
         run: make fast-contract-consistency-kpi-assert-selftest
 
+      - name: Generate fast contract artifact checksums
+        run: make fast-contract-checksums-generate FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json FAST_CONTRACT_CHECKSUMS=artifacts/contracts/sha256sums.txt
+
+      - name: Verify fast contract artifact checksums
+        run: make fast-contract-checksums-verify FAST_CONTRACT_CHECKSUMS=artifacts/contracts/sha256sums.txt
+
+      - name: Validate fast contract checksum verifier behavior
+        run: make fast-contract-checksums-verify-selftest
+
       - name: Verify fast contract artifacts before upload
         run: |
           make fast-contract-artifacts-verify \
@@ -154,7 +163,8 @@ jobs:
             FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json \
             FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json \
             FAST_CONTRACT_CONSISTENCY_JSON=artifacts/contracts/fast-contract-consistency-status.json \
-            FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json
+            FAST_CONTRACT_CONSISTENCY_KPI_JSON=artifacts/contracts/fast-contract-consistency-kpi.json \
+            FAST_CONTRACT_CHECKSUMS=artifacts/contracts/sha256sums.txt
 
       - name: Upload fast contract report artifact
         uses: actions/upload-artifact@v4
@@ -168,6 +178,7 @@ jobs:
             artifacts/contracts/fast-contract-gate-verdict.json
             artifacts/contracts/fast-contract-consistency-status.json
             artifacts/contracts/fast-contract-consistency-kpi.json
+            artifacts/contracts/sha256sums.txt
           if-no-files-found: error
           retention-days: 14
 
@@ -182,6 +193,7 @@ jobs:
             echo "- Fast contract gate verdict JSON: artifacts/contracts/fast-contract-gate-verdict.json"
             echo "- Fast contract consistency status JSON: artifacts/contracts/fast-contract-consistency-status.json"
             echo "- Fast contract consistency KPI JSON: artifacts/contracts/fast-contract-consistency-kpi.json"
+            echo "- Fast contract artifact checksums: artifacts/contracts/sha256sums.txt"
             verdict_overall="$$(python3 -c "import json;print(json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8')).get('overall', 'UNKNOWN'))")"
             verdict_reasons="$$(python3 -c "import json;d=json.load(open('artifacts/contracts/fast-contract-gate-verdict.json', 'r', encoding='utf-8'));r=d.get('reason_codes', []);print(','.join(r) if r else 'none')")"
             echo "- Verdict: $${verdict_overall} ($${verdict_reasons})"
