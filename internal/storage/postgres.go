@@ -15,8 +15,32 @@ type PostgresStore struct {
 	Pool *pgxpool.Pool
 }
 
-func NewPostgresStore(ctx context.Context, dsn string) (*PostgresStore, error) {
-	pool, err := pgxpool.New(ctx, dsn)
+type PoolOptions struct {
+	MinConns        int32
+	MaxConns        int32
+	MaxConnLifetime time.Duration
+}
+
+func NewPostgresStore(ctx context.Context, dsn string, options ...PoolOptions) (*PostgresStore, error) {
+	poolConfig, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(options) > 0 {
+		opts := options[0]
+		if opts.MinConns > 0 {
+			poolConfig.MinConns = opts.MinConns
+		}
+		if opts.MaxConns > 0 {
+			poolConfig.MaxConns = opts.MaxConns
+		}
+		if opts.MaxConnLifetime > 0 {
+			poolConfig.MaxConnLifetime = opts.MaxConnLifetime
+		}
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, err
 	}

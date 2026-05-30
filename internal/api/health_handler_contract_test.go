@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -265,5 +266,70 @@ func TestHealthHandlerNonCriticalFailureDegradesUsingEnvPolicy(t *testing.T) {
 	}
 	if got := payload.Dependencies["litellm"]; got.Status != healthStatusUnhealthy {
 		t.Fatalf("expected litellm to be unhealthy while noncritical, got %+v", got)
+	}
+}
+
+func TestHealthHandlerCachesProbeResults(t *testing.T) {
+	var probeCalls atomic.Int32
+
+	server := &Server{
+		Cfg: config.Settings{HealthCacheTTLMS: 5000},
+		healthProbesOverride: map[string]healthProbe{
+			"postgres": func(context.Context) error {
+				probeCalls.Add(1)
+				return nil
+			},
+			"redis":         func(context.Context) error { return nil },
+			"litellm":       func(context.Context) error { return nil },
+			"elasticsearch": func(context.Context) error { return nil },
+		},
+		hostMetricsOverride: func(context.Context) HostMetrics {
+			return HostMetrics{Hostname: "promaxgb10-6116"}
+		},
+	}
+
+	router := server.Router()
+	first := httptest.NewRecorder()
+	router.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if first.Code != http.StatusOK {
+		t.Fatalf("expected first health call to succeed, got %d", first.Code)
+	}
+
+	second := httptest.NewRecorder()
+	router.ServeHTTP(second, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if second.Code != http.StatusOK {
+		t.Fatalf("expected second health call to succeed, got %d", second.Code)
+	}
+
+	if probeCalls.Load() != 1 {
+		t.Fatalf("expected probe to run once due to caching, got %d", probeCalls.Load())
+	}
+}
+
+func TestHealthHandlerCacheCanBeDisabled(t *testing.T) {
+	var probeCalls atomic.Int32
+
+	server := &Server{
+		Cfg: config.Settings{HealthCacheDisabled: true},
+		healthProbesOverride: map[string]healthProbe{
+			"postgres": func(context.Context) error {
+				probeCalls.Add(1)
+				return nil
+			},
+			"redis":         func(context.Context) error { return nil },
+			"litellm":       func(context.Context) error { return nil },
+			"elasticsearch": func(context.Context) error { return nil },
+		},
+		hostMetricsOverride: func(context.Context) HostMetrics {
+			return HostMetrics{Hostname: "promaxgb10-6116"}
+		},
+	}
+
+	router := server.Router()
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/healthz", nil))
+
+	if probeCalls.Load() != 2 {
+		t.Fatalf("expected probe to run on every request when cache disabled, got %d", probeCalls.Load())
 	}
 }

@@ -1,4 +1,4 @@
-.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-proxy-flow-contract test-proxy-usage-params-contract test-ci-fast-proxy-usage test-prepush-local test-proxy-operational test-proxy-quick-local test-proxy-gate-local test-proxy-operational-flake test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
+.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-proxy-flow-contract test-proxy-usage-params-contract test-ci-fast-proxy-usage test-prepush-local test-proxy-operational test-proxy-quick-local test-proxy-gate-local test-proxy-operational-flake test-race bench-health bench-api-errors bench-middleware bench-assert bench-assert-stable bench-assert-json bench-compare-json bench-compare-self test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
 
 tidy:
 	go mod tidy
@@ -53,6 +53,33 @@ test-proxy-gate-local: test-proxy-quick-local
 test-proxy-operational-flake:
 	bash scripts/ci/run_proxy_operational_flake_check.sh "$${ITERATIONS:-5}"
 
+test-race:
+	go test -race ./...
+
+bench-health:
+	go test -bench BenchmarkHealthHandler -benchmem ./internal/api
+
+bench-api-errors:
+	go test -bench 'BenchmarkRenderAPIError|BenchmarkRAGBackendError' -benchmem ./internal/api
+
+bench-middleware:
+	go test -bench BenchmarkRequestIDMiddleware -benchmem ./internal/middleware
+
+bench-assert:
+	bash scripts/ci/benchmark_assert.sh
+
+bench-assert-stable:
+	BENCH_ASSERT_REPEAT=$${BENCH_ASSERT_REPEAT:-3} bash scripts/ci/benchmark_assert.sh
+
+bench-assert-json:
+	@BENCH_ASSERT_OUTPUT=json bash scripts/ci/benchmark_assert.sh
+
+bench-compare-json:
+	@bash scripts/ci/benchmark_compare_json.sh "$${BASELINE_BENCH_JSON:?set BASELINE_BENCH_JSON}" "$${CURRENT_BENCH_JSON:?set CURRENT_BENCH_JSON}"
+
+bench-compare-self:
+	@bash scripts/ci/benchmark_compare_self.sh
+
 test-ci-fast: test-health-contract
 
 test-ci-strict: test-health-contract
@@ -61,6 +88,7 @@ test-ci-strict: test-health-contract
 test-ci-all:
 	$(MAKE) test-health-contract
 	INTEGRATION_STRICT_BACKENDS=1 go test ./tests/integration -count=1
+	$(MAKE) test-race
 
 governance-ci-fast:
 	$(MAKE) verify-workflow-conventions

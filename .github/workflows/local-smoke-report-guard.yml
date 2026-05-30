@@ -125,6 +125,25 @@ jobs:
             capture_json artifacts/dashboard.json make report-health-dashboard-json
           fi
           capture_json artifacts/prune-policy.json make report-prune-assert-json
+
+          BENCH_ASSERT_REPEAT="${BENCH_COMPARE_REPEAT:-3}" \
+            BENCH_ASSERT_OUTPUT=json \
+            bash scripts/ci/benchmark_assert.sh > artifacts/bench-baseline.json || \
+            printf '{"error":"command_failed","command":"benchmark_assert baseline"}\n' > artifacts/bench-baseline.json
+
+          BENCH_ASSERT_REPEAT="${BENCH_COMPARE_REPEAT:-3}" \
+            BENCH_ASSERT_OUTPUT=json \
+            bash scripts/ci/benchmark_assert.sh > artifacts/bench-current.json || \
+            printf '{"error":"command_failed","command":"benchmark_assert current"}\n' > artifacts/bench-current.json
+
+          if BASELINE_BENCH_JSON=artifacts/bench-baseline.json \
+            CURRENT_BENCH_JSON=artifacts/bench-current.json \
+            make bench-compare-json > artifacts/bench-compare.json 2>/tmp/openedai_bench_compare_err.log; then
+            :
+          elif [[ ! -s artifacts/bench-compare.json ]]; then
+            printf '{"error":"command_failed","command":"make bench-compare-json"}\n' > artifacts/bench-compare.json
+          fi
+
           bash scripts/ci/workflow_artifact_manifest.sh smoke artifacts
 
       - name: Generate governance artifact checksums

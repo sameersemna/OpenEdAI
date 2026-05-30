@@ -15,6 +15,10 @@ WORKFLOWS = {
     '.github/workflows/local-smoke-report-guard-auth.yml': 'smoke',
     '.github/workflows/governance-policy-selftest.yml': 'selftest',
 }
+SMOKE_WORKFLOWS = {
+    '.github/workflows/local-smoke-report-guard.yml',
+    '.github/workflows/local-smoke-report-guard-auth.yml',
+}
 HELPER = Path('scripts/ci/workflow_artifact_manifest.sh')
 GOVERNANCE_CONVENTIONS_WORKFLOW = Path('.github/workflows/governance-workflow-conventions.yml')
 
@@ -98,6 +102,18 @@ for path_str, mode in WORKFLOWS.items():
             errors.append(f'{path_str}: retention-days expected 14, got {retention!r}')
         else:
             checks.append(f'{path_str}: retention-days OK')
+
+    if path_str in SMOKE_WORKFLOWS:
+        benchmark_artifact_checks = [
+            'artifacts/bench-baseline.json',
+            'artifacts/bench-current.json',
+            'artifacts/bench-compare.json',
+        ]
+        for artifact in benchmark_artifact_checks:
+            if artifact not in run_blocks:
+                errors.append(f'{path_str}: missing benchmark artifact generation for {artifact}')
+            else:
+                checks.append(f'{path_str}: benchmark artifact generation OK ({artifact})')
 
 if errors:
     print('[workflow-conventions][fail]')

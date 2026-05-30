@@ -193,3 +193,116 @@ func TestJournaldRequestLogMiddlewareOmitsProxyOnlyFieldsForNonProxyRoutes(t *te
 		t.Fatalf("unexpected key id %q", gotFields["OPENEDAI_KEY_ID"])
 	}
 }
+
+func TestJournaldRequestLogMiddlewareCapturesStructuredErrorFields(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var gotFields map[string]string
+	originalSender := sendJournalEntry
+	sendJournalEntry = func(_ string, _ journal.Priority, fields map[string]string) error {
+		gotFields = fields
+		return nil
+	}
+	defer func() {
+		sendJournalEntry = originalSender
+	}()
+
+	router := gin.New()
+	router.Use(JournaldRequestLogMiddleware())
+	router.GET("/v1/rag/search", func(c *gin.Context) {
+		SetRequestLogError(c, RequestLogError{Type: "service_unavailable", Code: "qdrant_unavailable"})
+		c.AbortWithStatusJSON(http.StatusBadGateway, gin.H{"error": gin.H{"message": "backend unavailable"}})
+	})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/v1/rag/search", nil))
+
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("expected status 502, got %d", w.Code)
+	}
+	if gotFields["OPENEDAI_ERROR_TYPE"] != "service_unavailable" {
+		t.Fatalf("unexpected error type %q", gotFields["OPENEDAI_ERROR_TYPE"])
+	}
+	if gotFields["OPENEDAI_ERROR_CODE"] != "qdrant_unavailable" {
+		t.Fatalf("unexpected error code %q", gotFields["OPENEDAI_ERROR_CODE"])
+	}
+}
+
+func TestJournaldRequestLogMiddlewareCorrelatesRequestIDWithErrorFields(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var gotFields map[string]string
+	originalSender := sendJournalEntry
+	sendJournalEntry = func(_ string, _ journal.Priority, fields map[string]string) error {
+		gotFields = fields
+		return nil
+	}
+	defer func() {
+		sendJournalEntry = originalSender
+	}()
+
+	router := gin.New()
+	router.Use(JournaldRequestLogMiddleware())
+	router.GET("/v1/rag/search", func(c *gin.Context) {
+		c.Header("X-Request-ID", "req-corr-1")
+		SetRequestLogError(c, RequestLogError{Type: "service_unavailable", Code: "elasticsearch_unavailable"})
+		c.AbortWithStatusJSON(http.StatusBadGateway, gin.H{"error": gin.H{"message": "backend unavailable"}})
+	})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/v1/rag/search", nil))
+
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("expected status 502, got %d", w.Code)
+	}
+	if gotFields["OPENEDAI_REQUEST_ID"] != "req-corr-1" {
+		t.Fatalf("unexpected request id %q", gotFields["OPENEDAI_REQUEST_ID"])
+	}
+	if gotFields["OPENEDAI_ERROR_TYPE"] != "service_unavailable" {
+		t.Fatalf("unexpected error type %q", gotFields["OPENEDAI_ERROR_TYPE"])
+	}
+	if gotFields["OPENEDAI_ERROR_CODE"] != "elasticsearch_unavailable" {
+		t.Fatalf("unexpected error code %q", gotFields["OPENEDAI_ERROR_CODE"])
+	}
+}
+
+func TestRouterChainAutoRequestIDAndErrorMetadataCorrelation(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var gotFields map[string]string
+	originalSender := sendJournalEntry
+	sendJournalEntry = func(_ string, _ journal.Priority, fields map[string]string) error {
+		gotFields = fields
+		return nil
+	}
+	defer func() {
+		sendJournalEntry = originalSender
+	}()
+
+	router := gin.New()
+	router.Use(RequestIDMiddleware())
+	router.Use(JournaldRequestLogMiddleware())
+	router.GET("/v1/chat/completions", func(c *gin.Context) {
+		SetRequestLogError(c, RequestLogError{Type: "service_unavailable", Code: "litellm_unavailable"})
+		c.AbortWithStatusJSON(http.StatusBadGateway, gin.H{"error": gin.H{"message": "Upstream LiteLLM unavailable"}})
+	})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/v1/chat/completions", nil))
+
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("expected status 502, got %d", w.Code)
+	}
+	if w.Header().Get("X-Request-ID") == "" {
+		t.Fatal("expected response to include X-Request-ID")
+	}
+	if gotFields["OPENEDAI_REQUEST_ID"] == "" {
+		t.Fatal("expected journald fields to include OPENEDAI_REQUEST_ID")
+	}
+	if gotFields["OPENEDAI_ERROR_TYPE"] != "service_unavailable" {
+		t.Fatalf("unexpected error type %q", gotFields["OPENEDAI_ERROR_TYPE"])
+	}
+	if gotFields["OPENEDAI_ERROR_CODE"] != "litellm_unavailable" {
+		t.Fatalf("unexpected error code %q", gotFields["OPENEDAI_ERROR_CODE"])
+	}
+}

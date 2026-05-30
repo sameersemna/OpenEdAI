@@ -12,6 +12,7 @@ import (
 
 	"openedai-gateway/internal/api"
 	"openedai-gateway/internal/config"
+	"openedai-gateway/internal/middleware"
 	"openedai-gateway/internal/services"
 	"openedai-gateway/internal/storage"
 
@@ -25,11 +26,17 @@ func main() {
 	}
 
 	ctx := context.Background()
-	store, err := storage.NewPostgresStore(ctx, cfg.PostgresDSN())
+	store, err := storage.NewPostgresStore(ctx, cfg.PostgresDSN(), storage.PoolOptions{
+		MinConns:        int32(cfg.PostgresMinConns),
+		MaxConns:        int32(cfg.PostgresMaxConns),
+		MaxConnLifetime: time.Duration(cfg.PostgresMaxConnLifetimeSeconds) * time.Second,
+	})
 	if err != nil {
 		log.Fatalf("failed connecting postgres: %v", err)
 	}
 	defer store.Close()
+
+	requestLifecycle := middleware.NewRequestLifecycle()
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     cfg.RedisAddr(),
@@ -47,16 +54,17 @@ func main() {
 		Cfg:         cfg,
 		Store:       store,
 		RedisClient: redisClient,
-		LiteLLM:     services.NewLiteLLMClient(cfg.LiteLLMBaseURL, cfg.RequestTimeoutSeconds),
+		LiteLLM:     services.NewLiteLLMClient(cfg.LiteLLMBaseURL, cfg.LiteLLMTimeoutSeconds),
 		Elasticsearch: services.NewElasticsearchClient(
 			cfg.ElasticsearchURL,
-			cfg.RequestTimeoutSeconds,
+			cfg.ElasticsearchTimeoutSeconds,
 			cfg.ElasticsearchUsername,
 			cfg.ElasticsearchPassword,
 			cfg.ElasticsearchAPIKey,
 			cfg.ElasticsearchInsecureTLS,
 		),
-		Qdrant: services.NewQdrantClient(cfg.QdrantURL, cfg.RequestTimeoutSeconds),
+		Qdrant:    services.NewQdrantClient(cfg.QdrantURL, cfg.QdrantTimeoutSeconds),
+		Lifecycle: requestLifecycle,
 	}
 
 	router := srv.Router()
@@ -81,10 +89,17 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	requestLifecycle.StartShutdown()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		log.Printf("shutdown error: %v", err)
+	}
+
+	drainCtx, drainCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer drainCancel()
+	if err := requestLifecycle.Wait(drainCtx); err != nil {
+		log.Printf("request drain incomplete: %v", err)
 	}
 }

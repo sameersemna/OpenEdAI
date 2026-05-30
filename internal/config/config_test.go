@@ -6,6 +6,91 @@ import (
 	"testing"
 )
 
+func TestLoadUsesRequestTimeoutAsBackendFallback(t *testing.T) {
+	t.Setenv("API_KEY_HASH_PEPPER", "test-pepper")
+	t.Setenv("REQUEST_TIMEOUT_SECONDS", "42")
+	t.Setenv("LITELLM_TIMEOUT_SECONDS", "0")
+	t.Setenv("ELASTICSEARCH_TIMEOUT_SECONDS", "-1")
+	t.Setenv("QDRANT_TIMEOUT_SECONDS", "0")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("expected successful load, got %v", err)
+	}
+
+	if cfg.LiteLLMTimeoutSeconds != 42 {
+		t.Fatalf("expected litellm timeout fallback 42, got %d", cfg.LiteLLMTimeoutSeconds)
+	}
+	if cfg.ElasticsearchTimeoutSeconds != 42 {
+		t.Fatalf("expected elasticsearch timeout fallback 42, got %d", cfg.ElasticsearchTimeoutSeconds)
+	}
+	if cfg.QdrantTimeoutSeconds != 42 {
+		t.Fatalf("expected qdrant timeout fallback 42, got %d", cfg.QdrantTimeoutSeconds)
+	}
+}
+
+func TestLoadRejectsInvalidPostgresPoolConfig(t *testing.T) {
+	t.Run("rejects negative min conns", func(t *testing.T) {
+		t.Setenv("API_KEY_HASH_PEPPER", "test-pepper")
+		t.Setenv("POSTGRES_MIN_CONNS", "-1")
+
+		_, err := Load()
+		if err == nil || !strings.Contains(err.Error(), "POSTGRES_MIN_CONNS") {
+			t.Fatalf("expected POSTGRES_MIN_CONNS validation error, got %v", err)
+		}
+	})
+
+	t.Run("rejects max lower than min", func(t *testing.T) {
+		t.Setenv("API_KEY_HASH_PEPPER", "test-pepper")
+		t.Setenv("POSTGRES_MIN_CONNS", "5")
+		t.Setenv("POSTGRES_MAX_CONNS", "4")
+
+		_, err := Load()
+		if err == nil || !strings.Contains(err.Error(), "POSTGRES_MAX_CONNS") {
+			t.Fatalf("expected POSTGRES_MAX_CONNS validation error, got %v", err)
+		}
+	})
+
+	t.Run("rejects non-positive lifetime", func(t *testing.T) {
+		t.Setenv("API_KEY_HASH_PEPPER", "test-pepper")
+		t.Setenv("POSTGRES_MAX_CONN_LIFETIME_SECONDS", "0")
+
+		_, err := Load()
+		if err == nil || !strings.Contains(err.Error(), "POSTGRES_MAX_CONN_LIFETIME_SECONDS") {
+			t.Fatalf("expected POSTGRES_MAX_CONN_LIFETIME_SECONDS validation error, got %v", err)
+		}
+	})
+}
+
+func TestLoadHealthCacheConfig(t *testing.T) {
+	t.Run("loads health cache flags", func(t *testing.T) {
+		t.Setenv("API_KEY_HASH_PEPPER", "test-pepper")
+		t.Setenv("HEALTH_CACHE_DISABLED", "true")
+		t.Setenv("HEALTH_CACHE_TTL_MS", "1500")
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("expected successful load, got %v", err)
+		}
+		if !cfg.HealthCacheDisabled {
+			t.Fatal("expected health cache to be disabled")
+		}
+		if cfg.HealthCacheTTLMS != 1500 {
+			t.Fatalf("expected health cache ttl 1500, got %d", cfg.HealthCacheTTLMS)
+		}
+	})
+
+	t.Run("rejects negative cache ttl", func(t *testing.T) {
+		t.Setenv("API_KEY_HASH_PEPPER", "test-pepper")
+		t.Setenv("HEALTH_CACHE_TTL_MS", "-1")
+
+		_, err := Load()
+		if err == nil || !strings.Contains(err.Error(), "HEALTH_CACHE_TTL_MS") {
+			t.Fatalf("expected HEALTH_CACHE_TTL_MS validation error, got %v", err)
+		}
+	})
+}
+
 func TestLoadRejectsNegativeHealthDegradedLatency(t *testing.T) {
 	t.Setenv("API_KEY_HASH_PEPPER", "test-pepper")
 	t.Setenv("HEALTH_DEGRADED_LATENCY_MS", "-1")

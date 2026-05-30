@@ -10,10 +10,16 @@ import (
 )
 
 const requestLogMetricsContextKey = "request_log_metrics"
+const requestLogErrorContextKey = "request_log_error"
 
 type RequestLogMetrics struct {
 	UpstreamLatencyMS int64
 	TokensUsed        int
+}
+
+type RequestLogError struct {
+	Type string
+	Code string
 }
 
 type journalSender func(string, journal.Priority, map[string]string) error
@@ -22,6 +28,10 @@ var sendJournalEntry journalSender = journal.Send
 
 func SetRequestLogMetrics(c *gin.Context, metrics RequestLogMetrics) {
 	c.Set(requestLogMetricsContextKey, metrics)
+}
+
+func SetRequestLogError(c *gin.Context, requestErr RequestLogError) {
+	c.Set(requestLogErrorContextKey, requestErr)
 }
 
 func JournaldRequestLogMiddleware() gin.HandlerFunc {
@@ -57,6 +67,15 @@ func JournaldRequestLogMiddleware() gin.HandlerFunc {
 			}
 		}
 
+		if requestErr, ok := getRequestLogError(c); ok {
+			if requestErr.Type != "" {
+				fields["OPENEDAI_ERROR_TYPE"] = requestErr.Type
+			}
+			if requestErr.Code != "" {
+				fields["OPENEDAI_ERROR_CODE"] = requestErr.Code
+			}
+		}
+
 		if err := sendJournalEntry(journalMessage(c), journalPriority(c.Writer.Status()), fields); err != nil {
 			c.Error(err)
 		}
@@ -73,6 +92,18 @@ func getRequestLogMetrics(c *gin.Context) (RequestLogMetrics, bool) {
 		return RequestLogMetrics{}, false
 	}
 	return metrics, true
+}
+
+func getRequestLogError(c *gin.Context) (RequestLogError, bool) {
+	v, ok := c.Get(requestLogErrorContextKey)
+	if !ok {
+		return RequestLogError{}, false
+	}
+	requestErr, ok := v.(RequestLogError)
+	if !ok {
+		return RequestLogError{}, false
+	}
+	return requestErr, true
 }
 
 func journalMessage(c *gin.Context) string {

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"openedai-gateway/internal/config"
@@ -28,6 +30,9 @@ type Server struct {
 	LiteLLM       *services.LiteLLMClient
 	Elasticsearch *services.ElasticsearchClient
 	Qdrant        *services.QdrantClient
+	Lifecycle     *middleware.RequestLifecycle
+	healthCacheMu sync.RWMutex
+	healthCache   *cachedHealth
 
 	healthProbesOverride map[string]healthProbe
 	hostMetricsOverride  func(context.Context) HostMetrics
@@ -36,12 +41,16 @@ type Server struct {
 func (s *Server) Router() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(middleware.RequestIDMiddleware())
 
 	r.GET("/healthz", s.health)
 	r.GET("/livez", s.live)
 	r.GET("/discovery", s.discovery)
 
 	v1 := r.Group("/v1")
+	if s.Lifecycle != nil {
+		v1.Use(middleware.InFlightRequestMiddleware(s.Lifecycle))
+	}
 	v1.Use(middleware.JournaldRequestLogMiddleware())
 	v1.Use(middleware.AuthMiddleware(s.Store, s.Cfg.APIKeyHashPepper))
 	v1.Use(middleware.RateLimitMiddlewareWithPrefix(s.RedisClient, s.Cfg.DefaultRateLimitPerMinute, s.Cfg.RedisKeyPrefix))
@@ -110,7 +119,7 @@ func (s *Server) proxyOpenAI(c *gin.Context, path string) {
 		middleware.SetRequestLogMetrics(c, middleware.RequestLogMetrics{
 			UpstreamLatencyMS: latencyMS,
 		})
-		c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"message": "Upstream LiteLLM unavailable"}})
+		renderAPIError(c, http.StatusBadGateway, "Upstream LiteLLM unavailable", errorTypeServiceUnavailable, errorCodeLiteLLMUnavailable)
 		return
 	}
 
@@ -133,8 +142,10 @@ func (s *Server) proxyOpenAI(c *gin.Context, path string) {
 			TokensUsed:        usage.TotalTokens,
 		})
 
-		_ = s.Store.TouchAPIKeyLastUsed(c.Request.Context(), apiKey.ID)
-		_ = s.Store.InsertUsageLog(c.Request.Context(), models.UsageLog{
+		if err := s.Store.TouchAPIKeyLastUsed(c.Request.Context(), apiKey.ID); err != nil {
+			log.Printf("warn: failed touching api key last_used_at key_id=%s request_id=%s err=%v", apiKey.ID, requestID, err)
+		}
+		if err := s.Store.InsertUsageLog(c.Request.Context(), models.UsageLog{
 			ID:               uuid.NewString(),
 			APIKeyID:         apiKey.ID,
 			RequestID:        requestID,
@@ -146,7 +157,9 @@ func (s *Server) proxyOpenAI(c *gin.Context, path string) {
 			EstimatedTokens:  estimated,
 			StatusCode:       statusCode,
 			LatencyMS:        latencyMS,
-		})
+		}); err != nil {
+			log.Printf("warn: failed inserting usage log key_id=%s request_id=%s endpoint=%s err=%v", apiKey.ID, requestID, path, err)
+		}
 	}
 
 	if statusCode < 200 || statusCode >= 300 {
@@ -194,7 +207,8 @@ func (s *Server) ragIndex(c *gin.Context) {
 	}
 
 	if err := s.Elasticsearch.Index(c.Request.Context(), req.Index, req.ID, req.Text, req.Metadata); err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"message": err.Error()}})
+		log.Printf("warn: rag index elasticsearch failed request_id=%s index=%s err=%v", c.GetHeader("X-Request-ID"), req.Index, err)
+		renderAPIError(c, http.StatusBadGateway, "RAG indexing backend unavailable", errorTypeServiceUnavailable, errorCodeElasticsearchUnavailable)
 		return
 	}
 
@@ -202,7 +216,8 @@ func (s *Server) ragIndex(c *gin.Context) {
 		"text":     req.Text,
 		"metadata": req.Metadata,
 	}); err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"message": err.Error()}})
+		log.Printf("warn: rag index qdrant failed request_id=%s collection=%s err=%v", c.GetHeader("X-Request-ID"), req.Collection, err)
+		renderAPIError(c, http.StatusBadGateway, "RAG indexing backend unavailable", errorTypeServiceUnavailable, errorCodeQdrantUnavailable)
 		return
 	}
 
@@ -235,6 +250,12 @@ func (s *Server) ragSearch(c *gin.Context) {
 
 	esHits, esErr := s.Elasticsearch.Search(c.Request.Context(), req.Index, req.Query, req.Limit)
 	qdrantHits, qErr := s.Qdrant.Search(c.Request.Context(), req.Collection, req.Vector, req.Limit)
+	if esErr != nil {
+		log.Printf("warn: rag search elasticsearch failed request_id=%s index=%s err=%v", c.GetHeader("X-Request-ID"), req.Index, esErr)
+	}
+	if qErr != nil {
+		log.Printf("warn: rag search qdrant failed request_id=%s collection=%s err=%v", c.GetHeader("X-Request-ID"), req.Collection, qErr)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"query": req.Query,
@@ -243,17 +264,35 @@ func (s *Server) ragSearch(c *gin.Context) {
 			"qdrant":        qdrantHits,
 		},
 		"errors": gin.H{
-			"elasticsearch": errString(esErr),
-			"qdrant":        errString(qErr),
+			"elasticsearch": ragBackendError("elasticsearch", esErr),
+			"qdrant":        ragBackendError("qdrant", qErr),
 		},
 	})
 }
 
-func errString(err error) any {
+func ragBackendError(backend string, err error) any {
 	if err == nil {
 		return nil
 	}
-	return err.Error()
+	if backend == "elasticsearch" {
+		return backendUnavailableError(backend, errorCodeElasticsearchUnavailable)
+	}
+	if backend == "qdrant" {
+		return backendUnavailableError(backend, errorCodeQdrantUnavailable)
+	}
+	return backendUnavailableError(backend, backend+"_unavailable")
+}
+
+func renderAPIError(c *gin.Context, statusCode int, message string, errType string, code string) {
+	middleware.SetRequestLogError(c, middleware.RequestLogError{Type: errType, Code: code})
+	errBody := gin.H{"message": message}
+	if errType != "" {
+		errBody["type"] = errType
+	}
+	if code != "" {
+		errBody["code"] = code
+	}
+	c.JSON(statusCode, gin.H{"error": errBody})
 }
 
 func (s *Server) listAPIKeys(c *gin.Context) {

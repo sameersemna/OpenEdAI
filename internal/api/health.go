@@ -20,9 +20,16 @@ const (
 
 	healthProbeTimeout        = 3 * time.Second
 	degradedLatencyThreshold  = 2 * time.Second
+	defaultHealthCacheTTL     = 5 * time.Second
 	cpuSamplingWindow         = 200 * time.Millisecond
 	hostMetricCollectionLimit = 500 * time.Millisecond
 )
+
+type cachedHealth struct {
+	response   HealthResponse
+	httpStatus int
+	expiresAt  time.Time
+}
 
 type HealthResponse struct {
 	Status               string                      `json:"status"`
@@ -64,6 +71,13 @@ func (s *Server) live(c *gin.Context) {
 }
 
 func (s *Server) health(c *gin.Context) {
+	if s.healthCacheEnabled() {
+		if cached, ok := s.cachedHealthResponse(); ok {
+			c.JSON(cached.httpStatus, cached.response)
+			return
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(c.Request.Context(), healthProbeTimeout)
 	defer cancel()
 
@@ -95,7 +109,7 @@ func (s *Server) health(c *gin.Context) {
 	}
 	resolvedCritical := s.criticalDependencyList()
 
-	c.JSON(httpStatus, HealthResponse{
+	response := HealthResponse{
 		Status: status,
 		HealthPolicy: HealthPolicy{
 			DegradedLatencyMS:    s.Cfg.ResolvedHealthDegradedLatencyMS(),
@@ -104,7 +118,51 @@ func (s *Server) health(c *gin.Context) {
 		CriticalDependencies: resolvedCritical,
 		Dependencies:         dependencies,
 		HostMetrics:          hostMetrics,
-	})
+	}
+
+	if s.healthCacheEnabled() {
+		s.setCachedHealthResponse(response, httpStatus)
+	}
+	c.JSON(httpStatus, response)
+}
+
+func (s *Server) healthCacheEnabled() bool {
+	if s.Cfg.HealthCacheDisabled {
+		return false
+	}
+	return s.healthCacheTTL() > 0
+}
+
+func (s *Server) healthCacheTTL() time.Duration {
+	if s.Cfg.HealthCacheTTLMS <= 0 {
+		return defaultHealthCacheTTL
+	}
+	return time.Duration(s.Cfg.HealthCacheTTLMS) * time.Millisecond
+}
+
+func (s *Server) cachedHealthResponse() (cachedHealth, bool) {
+	s.healthCacheMu.RLock()
+	defer s.healthCacheMu.RUnlock()
+
+	if s.healthCache == nil {
+		return cachedHealth{}, false
+	}
+	if time.Now().After(s.healthCache.expiresAt) {
+		return cachedHealth{}, false
+	}
+
+	return *s.healthCache, true
+}
+
+func (s *Server) setCachedHealthResponse(response HealthResponse, httpStatus int) {
+	s.healthCacheMu.Lock()
+	defer s.healthCacheMu.Unlock()
+
+	s.healthCache = &cachedHealth{
+		response:   response,
+		httpStatus: httpStatus,
+		expiresAt:  time.Now().Add(s.healthCacheTTL()),
+	}
 }
 
 func (s *Server) healthProbes() map[string]healthProbe {

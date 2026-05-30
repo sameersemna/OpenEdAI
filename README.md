@@ -93,6 +93,26 @@ Threshold configuration:
 - Malformed/non-integer values currently fall back to default (`2000`); negative values fail startup validation.
 - `HEALTH_CRITICAL_DEPENDENCIES` controls which unreachable dependencies force overall `unhealthy`
 - Default: `postgres,redis,litellm,elasticsearch`
+- `/healthz` response caching controls:
+   - `HEALTH_CACHE_DISABLED` (`false` by default)
+   - `HEALTH_CACHE_TTL_MS` (`5000` by default, must be `>= 0`)
+
+RAG backend error contract:
+- RAG backend failures now return sanitized, structured error payloads instead of raw upstream error strings.
+- Error shape for backend failures is standardized as: `message`, `type`, `code`.
+- Current codes include `elasticsearch_unavailable` and `qdrant_unavailable`.
+- Journald now includes structured error fields when available:
+   - `OPENEDAI_ERROR_TYPE`
+   - `OPENEDAI_ERROR_CODE`
+
+Timeout and pool tuning:
+- `REQUEST_TIMEOUT_SECONDS` is the global fallback timeout for upstream service calls.
+- `LITELLM_TIMEOUT_SECONDS`, `ELASTICSEARCH_TIMEOUT_SECONDS`, and `QDRANT_TIMEOUT_SECONDS` override upstream timeouts per backend.
+- Each per-backend timeout falls back to `REQUEST_TIMEOUT_SECONDS` when unset (`<= 0`).
+- PostgreSQL pool controls:
+   - `POSTGRES_MIN_CONNS` (default `1`)
+   - `POSTGRES_MAX_CONNS` (default `25`)
+   - `POSTGRES_MAX_CONN_LIFETIME_SECONDS` (default `1800`)
 
 Integration test mode:
 - By default, integration tests skip when LiteLLM/RAG backends are unavailable in local dev.
@@ -104,9 +124,25 @@ Integration test mode:
 - Convenience targets:
    - `make governance-ci-fast` (runs governance workflow convention checks plus governance policy self-test)
    - `make test-ci-fast` (matches the `health-contract-fast` workflow job)
+   - `make test-race` (runs `go test -race ./...`)
+   - `make bench-health` (benchmarks `/healthz` handler with cache-enabled and cache-disabled modes)
+   - `make bench-api-errors` (benchmarks API error envelope rendering and RAG backend error shaping)
+   - `make bench-middleware` (benchmarks request-id middleware behavior for generated and preserved IDs)
+   - `make bench-assert` (runs benchmark threshold assertions for health, API error, and middleware hot paths)
+   - `make bench-assert-stable` (same as `bench-assert`, but uses repeated sampling and median metrics for lower-noise checks; default repeat count is 3)
+      - Optional threshold overrides via env, e.g. `RENDER_ERROR_MAX_NS`, `RENDER_ERROR_MAX_BYTES`, `HEALTH_ENABLED_MAX_BYTES`, `REQ_ID_GENERATE_MAX_ALLOCS`
+   - Optional sampling override via env: `BENCH_ASSERT_REPEAT=<positive integer>`
+   - `make bench-assert-json` (same checks as `bench-assert` but emits one machine-readable JSON payload)
+      - `bench-assert` supports `BENCH_ASSERT_OUTPUT=json` for CI artifact generation workflows.
+   - `make bench-compare-json` (compares two `bench-assert-json` payloads using configurable regression thresholds)
+      - Required env vars: `BASELINE_BENCH_JSON`, `CURRENT_BENCH_JSON`
+      - Optional regression thresholds: `BENCH_COMPARE_MAX_NS_DELTA_PCT`, `BENCH_COMPARE_MAX_BYTES_DELTA_PCT`, `BENCH_COMPARE_MAX_ALLOCS_DELTA_PCT`
+      - Optional threshold profile: `BENCH_COMPARE_PROFILE=strict|normal|relaxed` (defaults to `normal`)
+   - `make bench-compare-self` (auto-generates baseline/current benchmark JSON snapshots and compares them in one command)
+      - Optional sampling override: `BENCH_COMPARE_REPEAT=<positive integer>` (defaults to `3`)
    - `make test-prepush-local` (simulates the sample pre-push path: fast proxy-usage checks + local gate)
    - `make test-ci-strict` (matches strict CI workflow jobs)
-   - `make test-ci-all` (runs fast + strict parity checks in sequence)
+   - `make test-ci-all` (runs fast + strict parity checks in sequence, then race checks)
    - `make smoke-gateway-local` (rebuild + restart + /livez + /healthz + unauthorized auth check)
    - `make smoke-gateway-auth` (same as local smoke, but requires `GATEWAY_TEST_API_KEY` and enforces authorized management check)
        - If `GATEWAY_TEST_API_KEY` is missing or invalid, the script attempts a one-time temporary admin key bootstrap in Postgres for local CI smoke.
@@ -166,6 +202,7 @@ CI operations:
 - Both local smoke guard workflows expose an optional `dashboard_lean` manual dispatch input that switches the workflow output to `make report-health-dashboard-json-lean`.
 - Both local smoke guard workflows expose an optional `run_policy_selftest` manual dispatch input that runs `make report-policy-selftest` after the smoke-report governance checks complete.
 - Both local smoke guard workflows upload governance JSON artifacts (`latest-summary.json`, `latest-drift.json`, `trend.json`, `combined-guard.json`, `policy-overview.json`, `dashboard.json`, `prune-policy.json`) plus `artifact-manifest.json`, `status-summary.json`, and `sha256sums.txt` with 14-day retention, and write a concise run summary.
+- Both local smoke guard workflows also upload benchmark governance artifacts (`bench-baseline.json`, `bench-current.json`, `bench-compare.json`) generated from `make bench-assert-json` and `make bench-compare-json`.
 - Governance workflows use `scripts/ci/workflow_artifact_manifest.sh` to generate artifact manifests and step summaries consistently (`smoke` and `selftest` modes).
 - Governance workflow structure checks are available via `scripts/ci/verify_workflow_conventions.sh` (`make verify-workflow-conventions`) and include checksum-generation, pre-upload bundle validation, and governance conventions schedule enforcement.
 - Governance artifact bundle verification is available via `scripts/ci/verify_artifact_bundle.sh` (`make verify-governance-artifacts`) and validates both checksum integrity and status summary readability/required fields (`BUNDLE_MODE=auto|smoke|selftest`).

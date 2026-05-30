@@ -9,6 +9,14 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+var rateLimitWindowScript = redis.NewScript(`
+local current = redis.call("INCR", KEYS[1])
+if current == 1 then
+  redis.call("EXPIRE", KEYS[1], ARGV[1])
+end
+return current
+`)
+
 func RateLimitMiddleware(redisClient *redis.Client, defaultLimit int) gin.HandlerFunc {
 	return RateLimitMiddlewareWithPrefix(redisClient, defaultLimit, "openedai")
 }
@@ -29,15 +37,17 @@ func RateLimitMiddlewareWithPrefix(redisClient *redis.Client, defaultLimit int, 
 		window := time.Now().UTC().Format("200601021504")
 		redisKey := fmt.Sprintf("%s:rate_limit:%s:%s", keyPrefix, apiKey.ID, window)
 
-		count, err := redisClient.Incr(c.Request.Context(), redisKey).Result()
+		count, err := rateLimitWindowScript.Run(
+			c.Request.Context(),
+			redisClient,
+			[]string{redisKey},
+			int(time.Minute.Seconds()),
+		).Int64()
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"error": gin.H{"message": "Rate limit backend error", "type": "server_error"},
 			})
 			return
-		}
-		if count == 1 {
-			_ = redisClient.Expire(c.Request.Context(), redisKey, time.Minute).Err()
 		}
 
 		if int(count) > limit {
