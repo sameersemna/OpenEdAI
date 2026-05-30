@@ -2,14 +2,12 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "${script_dir}/../.." && pwd)"
-verifier="${repo_root}/scripts/ci/verify_fast_contract_artifacts.sh"
+validator="${script_dir}/validate_fast_contract_consistency.sh"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
 report_ok="${tmp_dir}/ok-fast-contract-gate-report.md"
-contract_json="${tmp_dir}/contract-env-status.json"
 summary_json="${tmp_dir}/fast-contract-status-summary.json"
 trend_json="${tmp_dir}/fast-contract-trend.json"
 verdict_json="${tmp_dir}/fast-contract-gate-verdict.json"
@@ -24,21 +22,6 @@ cat >"$report_ok" <<'EOF'
 ```text
 ok
 ```
-EOF
-
-cat >"$contract_json" <<'EOF'
-{
-  "mode": "status-json",
-  "auto_source_env": false,
-  "overall_status": "degraded",
-  "status_require_all_up": 0,
-  "api_key_hash_pepper": "missing",
-  "services": {
-    "postgres": {"host": "127.0.0.1", "port": 5432, "status": "down"},
-    "redis": {"host": "127.0.0.1", "port": 6379, "status": "down"},
-    "litellm": {"host": "127.0.0.1", "port": 4000, "status": "down"}
-  }
-}
 EOF
 
 cat >"$summary_json" <<'EOF'
@@ -94,47 +77,7 @@ cat >"$verdict_json" <<'EOF'
 }
 EOF
 
-bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json"
-
-report_bad="${tmp_dir}/bad-fast-contract-gate-report.md"
-cat >"$report_bad" <<'EOF'
-# Fast Contract Gate Report (20260530-230000)
-
-- Command: make test-ci-fast-contracts
-EOF
-
-set +e
-bash "$verifier" "$report_bad" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" >/dev/null 2>&1
-rc=$?
-set -e
-
-if [[ "$rc" == "0" ]]; then
-  echo "[contracts][fail] artifact verifier should fail when report status line is missing" >&2
-  exit 1
-fi
-
-report_bad_command="${tmp_dir}/bad-command-fast-contract-gate-report.md"
-cat >"$report_bad_command" <<'EOF'
-# Fast Contract Gate Report (20260530-230000)
-
-- Status: PASS
-- Command: make test-ci-fast
-
-## Output
-```text
-ok
-```
-EOF
-
-set +e
-bash "$verifier" "$report_bad_command" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" >/dev/null 2>&1
-rc=$?
-set -e
-
-if [[ "$rc" == "0" ]]; then
-  echo "[contracts][fail] artifact verifier should fail when report command line is invalid" >&2
-  exit 1
-fi
+bash "$validator" "$report_ok" "$summary_json" "$trend_json" "$verdict_json"
 
 cat >"$verdict_json" <<'EOF'
 {
@@ -159,13 +102,13 @@ cat >"$verdict_json" <<'EOF'
 EOF
 
 set +e
-bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" >/dev/null 2>&1
+bash "$validator" "$report_ok" "$summary_json" "$trend_json" "$verdict_json" >/dev/null 2>&1
 rc=$?
 set -e
 
 if [[ "$rc" == "0" ]]; then
-  echo "[contracts][fail] artifact verifier should fail on cross-artifact inconsistency" >&2
+  echo "[contracts][fail] consistency validator should fail when verdict observed does not match trend summary" >&2
   exit 1
 fi
 
-echo "[contracts][ok] fast contract artifact verifier selftest passed"
+echo "[contracts][ok] fast contract consistency validator selftest passed"

@@ -109,8 +109,14 @@ jobs:
       - name: Validate fast contract artifact verifier behavior
         run: make fast-contract-artifacts-verify-selftest
 
+      - name: Validate fast contract cross-artifact consistency validator behavior
+        run: make fast-contract-consistency-validate-selftest
+
       - name: Assert fast contract gate manifest conformance
         run: make fast-contract-gate-manifest-assert
+
+      - name: Validate fast contract cross-artifact consistency
+        run: make fast-contract-consistency-validate FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json
 
       - name: Verify fast contract artifacts before upload
         run: |

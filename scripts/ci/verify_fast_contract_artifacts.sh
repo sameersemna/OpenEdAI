@@ -28,5 +28,6 @@ bash "$repo_root/scripts/ci/validate_contract_env_status_json.sh" "$contract_jso
 bash "$repo_root/scripts/ci/validate_fast_contract_status_summary_json.sh" "$summary_json"
 bash "$repo_root/scripts/ci/validate_fast_contract_trend_json.sh" "$trend_json"
 bash "$repo_root/scripts/ci/validate_fast_contract_gate_verdict_json.sh" "$verdict_json"
+bash "$repo_root/scripts/ci/validate_fast_contract_consistency.sh" "$report_path" "$summary_json" "$trend_json" "$verdict_json"
 
 echo "[contracts][ok] verified fast contract artifacts for upload"

@@ -43,6 +43,8 @@
 - Fast contract gate verdict self-test: `make fast-contract-gate-verdict-selftest`
 - Fast contract artifact pre-upload verification: `make fast-contract-artifacts-verify FAST_CONTRACT_REPORT=docs/reports/<report>.md`
 - Fast contract artifact verifier self-test: `make fast-contract-artifacts-verify-selftest`
+- Fast contract cross-artifact consistency validation: `make fast-contract-consistency-validate FAST_CONTRACT_REPORT=docs/reports/<report>.md`
+- Fast contract cross-artifact consistency validator self-test: `make fast-contract-consistency-validate-selftest`
 - Fast contract gate manifest conformance assertion: `make fast-contract-gate-manifest-assert`
 - Full local parity run for fast-contract-gate workflow (status JSON + validator checks + report + summary): `make test-ci-fast-contract-gate-local`
 - Fast parity + usage query-param contract checks: `make test-ci-fast-proxy-usage`
@@ -131,7 +133,7 @@
 
 ## PR Gate Coverage
 - The `health-contract-fast` workflow job runs `make test-ci-fast` for baseline health/startup contract parity.
-- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, validates JSON shape with `make contract-env-validate-json`, runs `make contract-env-validate-selftest`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, validates report markdown contract with `make fast-contract-report-validate-markdown`, runs `make fast-contract-report-validate-selftest`, generates `make fast-contract-status-summary`, validates summary shape with `make fast-contract-status-validate-json`, runs `make fast-contract-status-validate-selftest`, generates `make fast-contract-trend-json`, validates trend shape with `make fast-contract-trend-validate-json`, asserts thresholds with `make fast-contract-trend-assert`, generates verdict with `make fast-contract-gate-verdict`, validates verdict shape with `make fast-contract-gate-verdict-validate-json`, runs `make fast-contract-trend-validate-selftest`, runs `make fast-contract-gate-verdict-validate-selftest`, runs `make fast-contract-gate-verdict-selftest`, runs `make fast-contract-artifacts-verify-selftest`, asserts workflow conformance with `make fast-contract-gate-manifest-assert`, verifies all fast-gate artifacts with `make fast-contract-artifacts-verify`, uploads all fast-gate artifacts, and appends a step summary with status/summary/trend/verdict JSON payloads.
+- The `fast-contract-gate` workflow job captures `make contract-env-status-json`, validates JSON shape with `make contract-env-validate-json`, runs `make contract-env-validate-selftest`, runs `make contract-env-selftest`, runs `make test-ci-fast-contracts-report`, validates report markdown contract with `make fast-contract-report-validate-markdown`, runs `make fast-contract-report-validate-selftest`, generates `make fast-contract-status-summary`, validates summary shape with `make fast-contract-status-validate-json`, runs `make fast-contract-status-validate-selftest`, generates `make fast-contract-trend-json`, validates trend shape with `make fast-contract-trend-validate-json`, asserts thresholds with `make fast-contract-trend-assert`, generates verdict with `make fast-contract-gate-verdict`, validates verdict shape with `make fast-contract-gate-verdict-validate-json`, runs `make fast-contract-trend-validate-selftest`, runs `make fast-contract-gate-verdict-validate-selftest`, runs `make fast-contract-gate-verdict-selftest`, runs `make fast-contract-artifacts-verify-selftest`, runs `make fast-contract-consistency-validate-selftest`, asserts workflow conformance with `make fast-contract-gate-manifest-assert`, validates cross-artifact consistency with `make fast-contract-consistency-validate`, verifies all fast-gate artifacts with `make fast-contract-artifacts-verify`, uploads all fast-gate artifacts, and appends a step summary with status/summary/trend/verdict JSON payloads.
 - Strict backend checks remain in `health-contract-strict` and run when explicitly enabled via workflow dispatch or repository variable.
 
 ## Recommended Local Sequence
@@ -211,6 +213,7 @@
     - `make fast-contract-trend-validate-selftest`
     - `make fast-contract-gate-verdict-validate-selftest`
     - `make fast-contract-artifacts-verify-selftest`
+    - `make fast-contract-consistency-validate-selftest`
     - `make fast-contract-gate-manifest-assert`
   - Manual dispatch can optionally include strict-local checks by setting `run_strict_local_checks=true`.
 
