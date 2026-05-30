@@ -163,6 +163,9 @@ jobs:
       - name: Validate fast contract signed-count version-map parser behavior
         run: make fast-contract-signed-count-version-map-parser-selftest
 
+      - name: Validate fast contract signed-count lock matrix behavior
+        run: make fast-contract-signed-count-lock-matrix-selftest
+
       - name: Assert fast contract artifact manifest path integrity
         run: make fast-contract-artifact-manifest-assert-paths FAST_CONTRACT_ARTIFACT_MANIFEST=artifacts/contracts/fast-contract-artifact-manifest.json FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7 FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=7
 

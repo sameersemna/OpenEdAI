@@ -353,6 +353,11 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract signed-count version-map parser selftest OK')
 
+            if 'make fast-contract-signed-count-lock-matrix-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract signed-count lock matrix selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract signed-count lock matrix selftest OK')
+
             if 'make fast-contract-artifact-manifest-assert-paths' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest path assertion step')
             else:
@@ -429,6 +434,7 @@ else:
             'make fast-contract-artifact-manifest-assert-paths-selftest',
             'make fast-contract-artifact-manifest-version-lock-selftest',
             'make fast-contract-signed-count-version-map-parser-selftest',
+            'make fast-contract-signed-count-lock-matrix-selftest',
             'make fast-contract-checksums-verify-selftest',
             'make fast-contract-checksums-tamper-selftest',
             'make fast-contract-gate-manifest-assert-selftest',

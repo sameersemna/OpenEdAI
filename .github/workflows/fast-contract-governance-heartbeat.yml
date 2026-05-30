@@ -71,6 +71,9 @@ jobs:
       - name: Validate fast contract signed-count version-map parser behavior
         run: make fast-contract-signed-count-version-map-parser-selftest
 
+      - name: Validate fast contract signed-count lock matrix behavior
+        run: make fast-contract-signed-count-lock-matrix-selftest
+
       - name: Validate fast contract checksum verifier behavior
         run: make fast-contract-checksums-verify-selftest
 
