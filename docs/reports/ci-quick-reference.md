@@ -68,7 +68,7 @@
 - Run artifact verifier self-test (includes expected failures): `make verify-governance-artifacts-selftest`
 - Startup validation only: `make test-startup-config`
 - Focused health contract: `make test-health-contract`
-- Focused management route auth contract: `go test ./internal/api -run 'TestManagementRouteAuthContract' -count=1`
+- Focused management route contracts (auth + read-only store errors): `make test-management-route-contract`
 - Pre-push hook install (interactive): `make install-prepush-hook`
 - Pre-push hook install dry-run: `make install-prepush-hook-dry-run`
 - Pre-push hook install force: `make install-prepush-hook-force`
