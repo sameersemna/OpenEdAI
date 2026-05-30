@@ -26,6 +26,7 @@
 - Fast parity: `make test-ci-fast`
 - Fast contract gate (health + management route + usage params): `make test-ci-fast-contracts`
 - Fast contract gate (strict backend mode): `make test-ci-fast-contracts-strict`
+- Fast contract gate with report artifact output: `make test-ci-fast-contracts-report`
 - Fast parity + usage query-param contract checks: `make test-ci-fast-proxy-usage`
   - The sample `scripts/git-hooks/pre-push.example` uses this command before running `make test-proxy-gate-local`.
 - Strict parity: `make test-ci-strict`
@@ -90,7 +91,14 @@
 | Fast baseline parity | `make test-ci-fast` | Quick local sanity before development pushes |
 | Fast contract coverage | `make test-ci-fast-contracts` | Pre-push contract confidence loop |
 | Fast contract coverage (strict backends) | `make test-ci-fast-contracts-strict` | Self-hosted/ready backend environments |
+| Fast contract coverage + report artifact | `make test-ci-fast-contracts-report` | Capture contract-gate evidence in `docs/reports/` |
 | Full Phase 2 quality gate | `make test-phase2` | Release readiness and final validation |
+
+## Contract Gate Environment Notes
+- Fast contract preflight checks for `API_KEY_HASH_PEPPER` and warns when it is missing.
+- Set `FAST_CONTRACTS_REQUIRE_INTEGRATION_ENV=1` to make missing integration env fail fast.
+- Sample pre-push hook contract mode can be changed with `PRE_PUSH_CONTRACT_MODE=fast|strict` (default `fast`).
+- Strict fast-contract gate also requires reachable local integration backends (notably Postgres for proxy usage-parameter contract tests).
 
 ## Optional Git Hook
 - Template: `scripts/git-hooks/pre-push.example`

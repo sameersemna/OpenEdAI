@@ -1,4 +1,4 @@
-.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-management-route-contract test-proxy-flow-contract test-proxy-usage-params-contract test-ci-fast-contracts test-ci-fast-contracts-strict test-ci-fast-proxy-usage test-prepush-local test-proxy-operational test-proxy-quick-local test-proxy-gate-local test-proxy-operational-flake test-race test-phase2-unit test-phase2-contract test-phase2-race test-phase2-runtime test-phase2 bench-health bench-api-errors bench-middleware bench-assert bench-assert-stable bench-assert-json bench-compare-json bench-compare-self test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
+.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-management-route-contract test-proxy-flow-contract test-proxy-usage-params-contract test-ci-fast-contracts-preflight test-ci-fast-contracts test-ci-fast-contracts-strict test-ci-fast-contracts-report test-ci-fast-proxy-usage test-prepush-local test-proxy-operational test-proxy-quick-local test-proxy-gate-local test-proxy-operational-flake test-race test-phase2-unit test-phase2-contract test-phase2-race test-phase2-runtime test-phase2 bench-health bench-api-errors bench-middleware bench-assert bench-assert-stable bench-assert-json bench-compare-json bench-compare-self test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
 
 tidy:
 	go mod tidy
@@ -53,12 +53,43 @@ test-proxy-flow-contract:
 test-proxy-usage-params-contract:
 	go test ./tests/integration -run 'TestProxyFlowWithSplitKey/(usage_summary_.*fallback|usage_summary_.*boundary_validation)' -count=1 -v
 
-test-ci-fast-contracts: test-health-contract test-management-route-contract test-proxy-usage-params-contract
+test-ci-fast-contracts-preflight:
+	@missing=0; \
+	if [ -z "$$API_KEY_HASH_PEPPER" ]; then \
+		echo "[contracts][warn] API_KEY_HASH_PEPPER is not set; some focused integration contracts can skip."; \
+		missing=1; \
+	fi; \
+	if [ "$$missing" -eq 1 ] && [ "$${FAST_CONTRACTS_REQUIRE_INTEGRATION_ENV:-0}" = "1" ]; then \
+		echo "[contracts][fail] required integration env is missing (set API_KEY_HASH_PEPPER or FAST_CONTRACTS_REQUIRE_INTEGRATION_ENV=0)."; \
+		exit 1; \
+	fi
+
+test-ci-fast-contracts: test-ci-fast-contracts-preflight test-health-contract test-management-route-contract test-proxy-usage-params-contract
 
 test-ci-fast-contracts-strict:
-	INTEGRATION_STRICT_BACKENDS=1 $(MAKE) test-health-contract
-	$(MAKE) test-management-route-contract
-	INTEGRATION_STRICT_BACKENDS=1 $(MAKE) test-proxy-usage-params-contract
+	FAST_CONTRACTS_REQUIRE_INTEGRATION_ENV=1 INTEGRATION_STRICT_BACKENDS=1 $(MAKE) test-ci-fast-contracts
+
+test-ci-fast-contracts-report:
+	@set -e; \
+	ts="$$(date +%Y%m%d-%H%M%S)"; \
+	out="docs/reports/$${ts}-fast-contract-gate-report.md"; \
+	logfile="$$(mktemp)"; \
+	status="PASS"; \
+	if ! $(MAKE) test-ci-fast-contracts >"$$logfile" 2>&1; then status="FAIL"; fi; \
+	{ \
+		echo "# Fast Contract Gate Report ($$ts)"; \
+		echo; \
+		echo "- Status: $$status"; \
+		echo "- Command: make test-ci-fast-contracts"; \
+		echo; \
+		echo "## Output"; \
+		echo '```text'; \
+		cat "$$logfile"; \
+		echo '```'; \
+	} > "$$out"; \
+	rm -f "$$logfile"; \
+	echo "[contracts][report] wrote $$out"; \
+	if [ "$$status" = "FAIL" ]; then exit 1; fi
 
 test-ci-fast-proxy-usage: test-health-contract test-proxy-usage-params-contract
 

@@ -5,7 +5,15 @@ repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
 echo "[pre-push] Running fast contract gate checks..."
-make test-ci-fast-contracts
+contract_mode="${PRE_PUSH_CONTRACT_MODE:-fast}"
+case "$contract_mode" in
+	strict)
+		make test-ci-fast-contracts-strict
+		;;
+	fast|*)
+		make test-ci-fast-contracts
+		;;
+esac
 
 echo "[pre-push] Running proxy local gate checks..."
 make test-proxy-gate-local
