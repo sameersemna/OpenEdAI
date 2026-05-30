@@ -12,6 +12,7 @@ report_ok="${tmp_dir}/ok-fast-contract-gate-report.md"
 contract_json="${tmp_dir}/contract-env-status.json"
 summary_json="${tmp_dir}/fast-contract-status-summary.json"
 trend_json="${tmp_dir}/fast-contract-trend.json"
+verdict_json="${tmp_dir}/fast-contract-gate-verdict.json"
 
 cat >"$report_ok" <<'EOF'
 # Fast Contract Gate Report (synthetic)
@@ -66,7 +67,29 @@ cat >"$trend_json" <<'EOF'
 }
 EOF
 
-bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json"
+cat >"$verdict_json" <<'EOF'
+{
+  "generated_at": "2026-05-30T22:00:00+00:00",
+  "workflow": "fast-contract-gate",
+  "overall": "PASS",
+  "reason_codes": ["none"],
+  "thresholds": {
+    "max_fail": 0,
+    "max_unknown": 0,
+    "min_pass_rate": 100.0
+  },
+  "observed": {
+    "report_status": "PASS",
+    "contract_overall_status": "degraded",
+    "status_require_all_up": 0,
+    "fail": 0,
+    "unknown": 0,
+    "pass_rate_percent": 100.0
+  }
+}
+EOF
+
+bash "$verifier" "$report_ok" "$contract_json" "$summary_json" "$trend_json" "$verdict_json"
 
 report_bad="${tmp_dir}/bad-fast-contract-gate-report.md"
 cat >"$report_bad" <<'EOF'
@@ -76,7 +99,7 @@ cat >"$report_bad" <<'EOF'
 EOF
 
 set +e
-bash "$verifier" "$report_bad" "$contract_json" "$summary_json" "$trend_json" >/dev/null 2>&1
+bash "$verifier" "$report_bad" "$contract_json" "$summary_json" "$trend_json" "$verdict_json" >/dev/null 2>&1
 rc=$?
 set -e
 

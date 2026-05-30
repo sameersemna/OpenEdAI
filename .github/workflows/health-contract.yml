@@ -88,8 +88,14 @@ jobs:
       - name: Generate fast contract gate verdict JSON
         run: make fast-contract-gate-verdict FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json FAST_CONTRACT_MAX_FAIL=0 FAST_CONTRACT_MAX_UNKNOWN=0 FAST_CONTRACT_MIN_PASS_RATE=100
 
+      - name: Validate fast contract gate verdict JSON
+        run: make fast-contract-gate-verdict-validate-json FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json
+
       - name: Validate fast contract trend validator behavior
         run: make fast-contract-trend-validate-selftest
+
+      - name: Validate fast contract gate verdict JSON validator behavior
+        run: make fast-contract-gate-verdict-validate-selftest
 
       - name: Validate fast contract gate verdict behavior
         run: make fast-contract-gate-verdict-selftest
@@ -103,7 +109,8 @@ jobs:
             FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" \
             CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json \
             FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json \
-            FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json
+            FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json \
+            FAST_CONTRACT_VERDICT_JSON=artifacts/contracts/fast-contract-gate-verdict.json
 
       - name: Upload fast contract report artifact
         uses: actions/upload-artifact@v4

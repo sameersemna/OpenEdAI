@@ -32,6 +32,9 @@ jobs:
       - name: Validate fast contract trend validator behavior
         run: make fast-contract-trend-validate-selftest
 
+      - name: Validate fast contract gate verdict JSON validator behavior
+        run: make fast-contract-gate-verdict-validate-selftest
+
       - name: Validate fast contract artifact verifier behavior
         run: make fast-contract-artifacts-verify-selftest
 

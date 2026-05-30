@@ -37,7 +37,9 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract trend JSON',
     'Assert fast contract trend thresholds',
     'Generate fast contract gate verdict JSON',
+    'Validate fast contract gate verdict JSON',
     'Validate fast contract trend validator behavior',
+    'Validate fast contract gate verdict JSON validator behavior',
     'Validate fast contract gate verdict behavior',
     'Validate fast contract artifact verifier behavior',
     'Verify fast contract artifacts before upload',
@@ -200,10 +202,20 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract gate verdict generation OK')
 
+            if 'make fast-contract-gate-verdict-validate-json' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract gate verdict json validation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract gate verdict json validation OK')
+
             if 'make fast-contract-trend-validate-selftest' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract trend validator selftest step')
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract trend validator selftest OK')
+
+            if 'make fast-contract-gate-verdict-validate-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract gate verdict json validator selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract gate verdict json validator selftest OK')
 
             if 'make fast-contract-gate-verdict-selftest' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract gate verdict selftest step')
@@ -243,6 +255,7 @@ else:
             'make verify-workflow-conventions',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',
+            'make fast-contract-gate-verdict-validate-selftest',
             'make fast-contract-artifacts-verify-selftest',
         ]:
             if required not in run_blocks:
