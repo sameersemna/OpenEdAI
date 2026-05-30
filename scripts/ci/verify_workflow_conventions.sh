@@ -67,6 +67,7 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract signed-count lock error-message behavior',
     'Validate fast contract gate verdict reason-code behavior',
     'Validate fast contract policy fingerprint JSON validator behavior',
+    'Validate fast contract policy fingerprint drift behavior',
     'Assert fast contract artifact manifest path integrity',
     'Generate fast contract policy fingerprint JSON',
     'Validate fast contract policy fingerprint JSON',
@@ -379,6 +380,11 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract policy fingerprint validator selftest OK')
 
+            if 'make fast-contract-policy-fingerprint-drift-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract policy fingerprint drift selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract policy fingerprint drift selftest OK')
+
             if 'make fast-contract-artifact-manifest-assert-paths' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest path assertion step')
             else:
@@ -393,6 +399,11 @@ else:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract policy fingerprint json validation step')
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract policy fingerprint json validation OK')
+
+            if 'Policy fingerprint (sha256):' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing policy fingerprint summary line in step summary block')
+            else:
+                checks.append('.github/workflows/health-contract.yml: policy fingerprint summary line convention OK')
 
             if 'FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing explicit FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7 in manifest path assertion step')
@@ -469,6 +480,7 @@ else:
             'make fast-contract-signed-count-lock-error-messages-selftest',
             'make fast-contract-gate-verdict-reason-codes-selftest',
             'make fast-contract-policy-fingerprint-validate-selftest',
+            'make fast-contract-policy-fingerprint-drift-selftest',
             'make fast-contract-checksums-verify-selftest',
             'make fast-contract-checksums-tamper-selftest',
             'make fast-contract-gate-manifest-assert-selftest',
