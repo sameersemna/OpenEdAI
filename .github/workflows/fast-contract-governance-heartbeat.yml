@@ -44,6 +44,9 @@ jobs:
       - name: Validate fast contract cross-artifact consistency validator behavior
         run: make fast-contract-consistency-validate-selftest
 
+      - name: Validate fast contract gate manifest assertion behavior
+        run: make fast-contract-gate-manifest-assert-selftest
+
       - name: Assert fast contract gate manifest conformance
         run: make fast-contract-gate-manifest-assert
 

@@ -23,6 +23,7 @@
     "Validate fast contract gate verdict behavior",
     "Validate fast contract artifact verifier behavior",
     "Validate fast contract cross-artifact consistency validator behavior",
+    "Validate fast contract gate manifest assertion behavior",
     "Assert fast contract gate manifest conformance",
     "Validate fast contract cross-artifact consistency",
     "Verify fast contract artifacts before upload",
@@ -45,6 +46,7 @@
     "make fast-contract-gate-verdict-selftest",
     "make fast-contract-artifacts-verify-selftest",
     "make fast-contract-consistency-validate-selftest",
+    "make fast-contract-gate-manifest-assert-selftest",
     "make fast-contract-gate-manifest-assert",
     "make fast-contract-consistency-validate",
     "make fast-contract-artifacts-verify"
