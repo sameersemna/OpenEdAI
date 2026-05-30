@@ -74,6 +74,9 @@ jobs:
       - name: Validate fast contract signed-count lock matrix behavior
         run: make fast-contract-signed-count-lock-matrix-selftest
 
+      - name: Validate fast contract signed-count lock error-message behavior
+        run: make fast-contract-signed-count-lock-error-messages-selftest
+
       - name: Validate fast contract checksum verifier behavior
         run: make fast-contract-checksums-verify-selftest
 

@@ -63,6 +63,8 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract artifact manifest path assertion behavior',
     'Validate fast contract artifact manifest version-lock behavior',
     'Validate fast contract signed-count version-map parser behavior',
+    'Validate fast contract signed-count lock matrix behavior',
+    'Validate fast contract signed-count lock error-message behavior',
     'Assert fast contract artifact manifest path integrity',
     'Generate fast contract artifact checksums',
     'Verify fast contract artifact checksums',
@@ -358,6 +360,11 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract signed-count lock matrix selftest OK')
 
+            if 'make fast-contract-signed-count-lock-error-messages-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract signed-count lock error-message selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract signed-count lock error-message selftest OK')
+
             if 'make fast-contract-artifact-manifest-assert-paths' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest path assertion step')
             else:
@@ -435,6 +442,7 @@ else:
             'make fast-contract-artifact-manifest-version-lock-selftest',
             'make fast-contract-signed-count-version-map-parser-selftest',
             'make fast-contract-signed-count-lock-matrix-selftest',
+            'make fast-contract-signed-count-lock-error-messages-selftest',
             'make fast-contract-checksums-verify-selftest',
             'make fast-contract-checksums-tamper-selftest',
             'make fast-contract-gate-manifest-assert-selftest',
