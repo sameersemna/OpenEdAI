@@ -76,6 +76,23 @@ jobs:
       - name: Validate fast contract status summary validator behavior
         run: make fast-contract-status-validate-selftest
 
+      - name: Generate fast contract trend JSON
+        run: make fast-contract-trend-json FAST_CONTRACT_TREND_LIMIT=10 FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json
+
+      - name: Validate fast contract trend JSON
+        run: make fast-contract-trend-validate-json FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json
+
+      - name: Validate fast contract trend validator behavior
+        run: make fast-contract-trend-validate-selftest
+
+      - name: Verify fast contract artifacts before upload
+        run: |
+          make fast-contract-artifacts-verify \
+            FAST_CONTRACT_REPORT="${{ steps.report.outputs.path }}" \
+            CONTRACT_ENV_JSON=artifacts/contracts/contract-env-status.json \
+            FAST_CONTRACT_STATUS_SUMMARY=artifacts/contracts/fast-contract-status-summary.json \
+            FAST_CONTRACT_TREND_JSON=artifacts/contracts/fast-contract-trend.json
+
       - name: Upload fast contract report artifact
         uses: actions/upload-artifact@v4
         with:
@@ -84,6 +101,7 @@ jobs:
             ${{ steps.report.outputs.path }}
             artifacts/contracts/contract-env-status.json
             artifacts/contracts/fast-contract-status-summary.json
+            artifacts/contracts/fast-contract-trend.json
           if-no-files-found: error
           retention-days: 14
 
@@ -94,6 +112,7 @@ jobs:
             echo "- Report: ${{ steps.report.outputs.path }}"
             echo "- Contract environment status JSON: artifacts/contracts/contract-env-status.json"
             echo "- Fast contract status summary JSON: artifacts/contracts/fast-contract-status-summary.json"
+            echo "- Fast contract trend JSON: artifacts/contracts/fast-contract-trend.json"
             echo
             echo "### Contract Environment Status"
             echo '```json'
@@ -103,6 +122,11 @@ jobs:
             echo "### Fast Contract Status Summary"
             echo '```json'
             cat artifacts/contracts/fast-contract-status-summary.json
+            echo '```'
+            echo
+            echo "### Fast Contract Trend"
+            echo '```json'
+            cat artifacts/contracts/fast-contract-trend.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

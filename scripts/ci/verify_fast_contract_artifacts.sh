@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "${script_dir}/../.." && pwd)"
+
+report_path="${1:-${FAST_CONTRACT_REPORT:-}}"
+contract_json="${2:-${CONTRACT_ENV_JSON:-artifacts/contracts/contract-env-status.json}}"
+summary_json="${3:-${FAST_CONTRACT_STATUS_SUMMARY:-artifacts/contracts/fast-contract-status-summary.json}}"
+trend_json="${4:-${FAST_CONTRACT_TREND_JSON:-artifacts/contracts/fast-contract-trend.json}}"
+
+if [[ -z "$report_path" || ! -f "$report_path" ]]; then
+  echo "[contracts][fail] fast contract report not found: ${report_path:-<empty>}" >&2
+  exit 1
+fi
+
+for artifact in "$contract_json" "$summary_json" "$trend_json"; do
+  if [[ ! -s "$artifact" ]]; then
+    echo "[contracts][fail] artifact missing or empty: $artifact" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Eq '^- Status:[[:space:]]*(PASS|FAIL)$' "$report_path"; then
+  echo "[contracts][fail] report missing required status line: $report_path" >&2
+  exit 1
+fi
+
+bash "$repo_root/scripts/ci/validate_contract_env_status_json.sh" "$contract_json"
+bash "$repo_root/scripts/ci/validate_fast_contract_status_summary_json.sh" "$summary_json"
+bash "$repo_root/scripts/ci/validate_fast_contract_trend_json.sh" "$trend_json"
+
+echo "[contracts][ok] verified fast contract artifacts for upload"

@@ -32,6 +32,10 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Generate fast contract status summary JSON',
     'Validate fast contract status summary JSON',
     'Validate fast contract status summary validator behavior',
+    'Generate fast contract trend JSON',
+    'Validate fast contract trend JSON',
+    'Validate fast contract trend validator behavior',
+    'Verify fast contract artifacts before upload',
     'Upload fast contract report artifact',
     'Append fast contract summary',
 ]
@@ -170,6 +174,26 @@ else:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract status summary validator selftest step')
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract status summary validator selftest OK')
+
+            if 'make fast-contract-trend-json' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract trend generation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract trend generation OK')
+
+            if 'make fast-contract-trend-validate-json' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract trend json validation step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract trend json validation OK')
+
+            if 'make fast-contract-trend-validate-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract trend validator selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract trend validator selftest OK')
+
+            if 'make fast-contract-artifacts-verify' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract artifact verification step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract artifact verification step OK')
 
 if errors:
     print('[workflow-conventions][fail]')

@@ -9,6 +9,10 @@ contract_mode="${PRE_PUSH_CONTRACT_MODE:-fast}"
 echo "[pre-push] contract mode: ${contract_mode}"
 case "$contract_mode" in
 	parity)
+		if [[ "${PRE_PUSH_PARITY_STRICT_LOCAL:-0}" == "1" ]]; then
+			make contract-env-status
+			make test-ci-fast-contracts-strict-local
+		fi
 		make test-prepush-parity-local ITERATIONS="${ITERATIONS:-2}"
 		exit 0
 		;;
