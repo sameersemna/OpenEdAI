@@ -302,6 +302,9 @@ func (s *Server) usageSummary(c *gin.Context) {
 	apiKeyID := c.Query("api_key_id")
 	if apiKeyID == "" {
 		apiKeyID = apiKey.ID
+	} else if apiKeyID != apiKey.ID && !apiKey.IsAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"message": "Admin privileges required"}})
+		return
 	}
 
 	hours := 24

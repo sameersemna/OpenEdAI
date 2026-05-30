@@ -1,4 +1,4 @@
-.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
+.PHONY: tidy build run migrate setup install-service test-integration test-integration-strict test-startup-config test-health-contract test-proxy-flow-contract test-proxy-usage-params-contract test-ci-fast-proxy-usage test-prepush-local test-proxy-operational test-proxy-quick-local test-proxy-gate-local test-proxy-operational-flake test-ci-fast test-ci-strict test-ci-all governance-ci-fast ci-check-matrix ci-local-status smoke-gateway-local smoke-gateway-auth report-generate-local-smoke report-generate-local-smoke-auth report-latest-summary report-latest-summary-json report-compare-latest report-compare-latest-json report-trend-last report-trend-last-json report-trend-assert report-guard report-guard-auth report-guard-all report-guard-all-json report-guard-all-assert report-health-dashboard-json report-health-dashboard-json-lean report-policy-overview-json report-policy-selftest report-prune report-prune-assert report-prune-assert-json verify-workflow-conventions verify-governance-artifacts verify-governance-artifacts-selftest install-shellcheck-linux install-prepush-hook install-prepush-hook-dry-run install-prepush-hook-force shellcheck-scripts
 
 tidy:
 	go mod tidy
@@ -30,6 +30,28 @@ test-startup-config:
 test-health-contract:
 	go test ./internal/config -run 'TestLoadRejectsNegativeHealthDegradedLatency|TestLoadFallsBackForMalformedHealthDegradedLatency' -count=1
 	go test ./tests/integration -run 'TestHealthzContract|TestGatewayStartupRejectsNegativeHealthDegradedLatency|TestIntegrationStrictBackends' -count=1
+
+test-proxy-flow-contract:
+	go test ./tests/integration -run TestProxyFlowWithSplitKey -count=1 -v
+
+test-proxy-usage-params-contract:
+	go test ./tests/integration -run 'TestProxyFlowWithSplitKey/(usage_summary_.*fallback|usage_summary_.*boundary_validation)' -count=1 -v
+
+test-ci-fast-proxy-usage: test-health-contract test-proxy-usage-params-contract
+
+test-prepush-local: test-ci-fast-proxy-usage
+	$(MAKE) test-proxy-gate-local ITERATIONS=$${ITERATIONS:-2}
+
+test-proxy-operational:
+	go test ./tests/integration -run TestProxyOperationalFlow -count=1 -v
+
+test-proxy-quick-local: test-proxy-flow-contract test-proxy-operational
+
+test-proxy-gate-local: test-proxy-quick-local
+	$(MAKE) test-proxy-operational-flake ITERATIONS=$${ITERATIONS:-5}
+
+test-proxy-operational-flake:
+	bash scripts/ci/run_proxy_operational_flake_check.sh "$${ITERATIONS:-5}"
 
 test-ci-fast: test-health-contract
 

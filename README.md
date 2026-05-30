@@ -104,6 +104,7 @@ Integration test mode:
 - Convenience targets:
    - `make governance-ci-fast` (runs governance workflow convention checks plus governance policy self-test)
    - `make test-ci-fast` (matches the `health-contract-fast` workflow job)
+   - `make test-prepush-local` (simulates the sample pre-push path: fast proxy-usage checks + local gate)
    - `make test-ci-strict` (matches strict CI workflow jobs)
    - `make test-ci-all` (runs fast + strict parity checks in sequence)
    - `make smoke-gateway-local` (rebuild + restart + /livez + /healthz + unauthorized auth check)

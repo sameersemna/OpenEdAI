@@ -22,8 +22,17 @@
 - Show local tool status: `make ci-local-status`
 - Governance quick check: `make governance-ci-fast`
 - Fast parity: `make test-ci-fast`
+- Fast parity + usage query-param contract checks: `make test-ci-fast-proxy-usage`
+  - The sample `scripts/git-hooks/pre-push.example` uses this command before running `make test-proxy-gate-local`.
 - Strict parity: `make test-ci-strict`
 - Full parity (fast + strict): `make test-ci-all`
+- Focused proxy-flow contract checks: `make test-proxy-flow-contract`
+- Focused usage query-param contract checks: `make test-proxy-usage-params-contract`
+- Simulate sample pre-push flow locally: `make test-prepush-local` (override gate flake count with `ITERATIONS=<n>`)
+- Single operational flow check: `make test-proxy-operational`
+- Combined focused + operational single-run checks: `make test-proxy-quick-local`
+- High-confidence local gate (quick-local + flake): `make test-proxy-gate-local` (override flake count with `ITERATIONS=<n>`)
+- Re-run the proxy operational flow for flake detection: `make test-proxy-operational-flake` (override with `ITERATIONS=<n>`)
 - Local service smoke (restart + endpoint checks): `make smoke-gateway-local`
 - Local service smoke with required auth check: `make smoke-gateway-auth`
   - If `GATEWAY_TEST_API_KEY` is unset (or fails), the script bootstraps a temporary admin split key in Postgres and retries once.
@@ -174,28 +183,29 @@ Self-test example:
 ## Release Checklist
 1. Run `make ci-local-status` and ensure required local tools are available.
 2. Run `make test-ci-all` to execute fast + strict local parity checks.
-3. Run `make smoke-gateway-local` to validate restart + endpoint behavior.
-4. If you have a management test key, export `GATEWAY_TEST_API_KEY` and run `make smoke-gateway-auth`.
-5. If shell scripts/workflows changed, run `make shellcheck-scripts`.
-6. Capture the run output in a timestamped report under `docs/reports/` (or run `make report-generate-local-smoke`).
-7. Run `make report-latest-summary` for a compact pass/fail line.
-8. Run `make report-latest-summary-json` for machine-readable output.
-9. If you need enforced auth validation evidence, run `make report-generate-local-smoke-auth`.
-10. Run `make report-compare-latest` to detect checklist drift across recent runs.
-11. Run `make report-compare-latest-json` for machine-readable drift detection.
-12. Run `make report-guard` to fail fast when summary is not PASS or drift is detected.
-13. Run `make report-trend-last` to inspect trend across recent reports (or `bash scripts/ci/report_trend_last.sh <N>`).
-14. Run `make report-trend-last-json` when machine-readable trend data is needed (or `bash scripts/ci/report_trend_last_json.sh <N>`).
-15. Run `make report-trend-assert` to enforce rolling trend thresholds.
-16. Run `make report-guard-auth` to enforce that the latest auth smoke report exists and all auth checks are zero.
-17. Run `make report-guard-all` to enforce standard guard and automatically include auth guard when auth reports exist.
-18. Run `make report-guard-all-json` when CI or automation needs one combined JSON status payload.
-19. Run `bash scripts/ci/report_guard_all_assert.sh PASS ANY` to fail fast when combined guard output does not match expected states.
-20. Run `make report-health-dashboard-json` when dashboards/alerts need one compact payload combining latest summary, latest drift, trend, combined guard status, policy overview, and prune policy status.
-21. Run `make report-health-dashboard-json-lean` when you want the same dashboard payload but without the duplicated top-level `prune_policy` block.
-22. Run `DRY_RUN=1 make report-prune` to preview report retention effects, then run `make report-prune` to apply cleanup.
-23. Run `make report-prune-assert` to enforce maximum report inventory limits for standard/auth smoke artifacts.
-24. Run `make report-prune-assert-json` when automation needs prune policy status as pure JSON.
-25. Set `MAX_STANDARD_AGE_DAYS` / `MAX_AUTH_AGE_DAYS` when you need retention policy assertions on report age, not only counts.
-26. Run `make report-policy-overview-json` when automation needs one JSON status for both trend thresholds and prune policy limits.
-27. Run `make report-policy-selftest` to verify expected success/failure behavior for baseline, trend-threshold, prune-total, and prune-age governance cases.
+3. Run `make test-proxy-operational-flake ITERATIONS=5` when you need repeated confidence on the end-to-end proxy accounting path.
+4. Run `make smoke-gateway-local` to validate restart + endpoint behavior.
+5. If you have a management test key, export `GATEWAY_TEST_API_KEY` and run `make smoke-gateway-auth`.
+6. If shell scripts/workflows changed, run `make shellcheck-scripts`.
+7. Capture the run output in a timestamped report under `docs/reports/` (or run `make report-generate-local-smoke`).
+8. Run `make report-latest-summary` for a compact pass/fail line.
+9. Run `make report-latest-summary-json` for machine-readable output.
+10. If you need enforced auth validation evidence, run `make report-generate-local-smoke-auth`.
+11. Run `make report-compare-latest` to detect checklist drift across recent runs.
+12. Run `make report-compare-latest-json` for machine-readable drift detection.
+13. Run `make report-guard` to fail fast when summary is not PASS or drift is detected.
+14. Run `make report-trend-last` to inspect trend across recent reports (or `bash scripts/ci/report_trend_last.sh <N>`).
+15. Run `make report-trend-last-json` when machine-readable trend data is needed (or `bash scripts/ci/report_trend_last_json.sh <N>`).
+16. Run `make report-trend-assert` to enforce rolling trend thresholds.
+17. Run `make report-guard-auth` to enforce that the latest auth smoke report exists and all auth checks are zero.
+18. Run `make report-guard-all` to enforce standard guard and automatically include auth guard when auth reports exist.
+19. Run `make report-guard-all-json` when CI or automation needs one combined JSON status payload.
+20. Run `bash scripts/ci/report_guard_all_assert.sh PASS ANY` to fail fast when combined guard output does not match expected states.
+21. Run `make report-health-dashboard-json` when dashboards/alerts need one compact payload combining latest summary, latest drift, trend, combined guard status, policy overview, and prune policy status.
+22. Run `make report-health-dashboard-json-lean` when you want the same dashboard payload but without the duplicated top-level `prune_policy` block.
+23. Run `DRY_RUN=1 make report-prune` to preview report retention effects, then run `make report-prune` to apply cleanup.
+24. Run `make report-prune-assert` to enforce maximum report inventory limits for standard/auth smoke artifacts.
+25. Run `make report-prune-assert-json` when automation needs prune policy status as pure JSON.
+26. Set `MAX_STANDARD_AGE_DAYS` / `MAX_AUTH_AGE_DAYS` when you need retention policy assertions on report age, not only counts.
+27. Run `make report-policy-overview-json` when automation needs one JSON status for both trend thresholds and prune policy limits.
+28. Run `make report-policy-selftest` to verify expected success/failure behavior for baseline, trend-threshold, prune-total, and prune-age governance cases.
