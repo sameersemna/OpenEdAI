@@ -72,6 +72,12 @@ func TestRAGFlowWithSplitKey(t *testing.T) {
 			var errResp map[string]any
 			if err := json.Unmarshal(raw, &errResp); err == nil {
 				if errMap, ok := errResp["error"].(map[string]any); ok {
+					if errMap["type"] != "service_unavailable" {
+						t.Fatalf("expected service_unavailable type for rag index backend failure, got %#v", errMap["type"])
+					}
+					if errMap["code"] == nil {
+						t.Fatalf("expected backend-specific code for rag index backend failure, body=%s", string(raw))
+					}
 					if msg, ok := errMap["message"].(string); ok && msg != "" {
 						backendUnavailable(t, "RAG backend unavailable: %s", msg)
 					}
@@ -107,7 +113,7 @@ func TestRAGFlowWithSplitKey(t *testing.T) {
 			backendUnavailable(t, "RAG backend unavailable")
 		}
 
-		if status != http.StatusOK {
+		if status != http.StatusOK && status != http.StatusPartialContent {
 			t.Fatalf("rag search status = %d, body = %s", status, string(raw))
 		}
 
@@ -117,6 +123,15 @@ func TestRAGFlowWithSplitKey(t *testing.T) {
 		}
 		if _, ok := resp["results"]; !ok {
 			t.Fatal("rag search response missing 'results' field")
+		}
+		if status == http.StatusPartialContent {
+			errorsRaw, ok := resp["errors"].(map[string]any)
+			if !ok {
+				t.Fatalf("partial rag search expected 'errors' map, body = %s", string(raw))
+			}
+			if errorsRaw["elasticsearch"] == nil && errorsRaw["qdrant"] == nil {
+				t.Fatalf("partial rag search expected one backend error payload, body = %s", string(raw))
+			}
 		}
 	})
 
@@ -128,10 +143,11 @@ func TestRAGFlowWithSplitKey(t *testing.T) {
 			"text": "should fail",
 			"vector": [0.1, 0.2, 0.3, 0.4]
 		}`)
-		status, _ := doJSONRequest(t, "POST", baseURL+"/v1/rag/index", invalidKey, body)
+		status, raw := doJSONRequest(t, "POST", baseURL+"/v1/rag/index", invalidKey, body)
 		if status != http.StatusUnauthorized {
 			t.Fatalf("invalid key should be rejected with 401, got %d", status)
 		}
+		assertErrorEnvelope(t, raw, "Invalid API key", "invalid_request_error", "")
 	})
 
 	t.Run("rag_expired_key_rejected", func(t *testing.T) {
@@ -160,9 +176,10 @@ func TestRAGFlowWithSplitKey(t *testing.T) {
 			"text": "should fail expired",
 			"vector": [0.1, 0.2, 0.3, 0.4]
 		}`)
-		status, _ := doJSONRequest(t, "POST", baseURL+"/v1/rag/index", expiredKey, body)
+		status, raw := doJSONRequest(t, "POST", baseURL+"/v1/rag/index", expiredKey, body)
 		if status != http.StatusUnauthorized {
 			t.Fatalf("expired key should be rejected with 401, got %d", status)
 		}
+		assertErrorEnvelope(t, raw, "Invalid API key", "invalid_request_error", "")
 	})
 }

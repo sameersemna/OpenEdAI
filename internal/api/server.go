@@ -27,9 +27,9 @@ type Server struct {
 	Cfg           config.Settings
 	Store         *storage.PostgresStore
 	RedisClient   *redis.Client
-	LiteLLM       *services.LiteLLMClient
-	Elasticsearch *services.ElasticsearchClient
-	Qdrant        *services.QdrantClient
+	LiteLLM       services.LiteLLMService
+	Elasticsearch services.ElasticsearchService
+	Qdrant        services.QdrantService
 	Lifecycle     *middleware.RequestLifecycle
 	healthCacheMu sync.RWMutex
 	healthCache   *cachedHealth
@@ -257,7 +257,8 @@ func (s *Server) ragSearch(c *gin.Context) {
 		log.Printf("warn: rag search qdrant failed request_id=%s collection=%s err=%v", c.GetHeader("X-Request-ID"), req.Collection, qErr)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	status := ragSearchResponseStatus(esErr, qErr)
+	c.JSON(status, gin.H{
 		"query": req.Query,
 		"results": gin.H{
 			"elasticsearch": esHits,
@@ -268,6 +269,16 @@ func (s *Server) ragSearch(c *gin.Context) {
 			"qdrant":        ragBackendError("qdrant", qErr),
 		},
 	})
+}
+
+func ragSearchResponseStatus(esErr, qdrantErr error) int {
+	if esErr != nil && qdrantErr != nil {
+		return http.StatusBadGateway
+	}
+	if esErr != nil || qdrantErr != nil {
+		return http.StatusPartialContent
+	}
+	return http.StatusOK
 }
 
 func ragBackendError(backend string, err error) any {
@@ -296,6 +307,11 @@ func renderAPIError(c *gin.Context, statusCode int, message string, errType stri
 }
 
 func (s *Server) listAPIKeys(c *gin.Context) {
+	if s.Store == nil {
+		renderAPIError(c, http.StatusInternalServerError, "Failed to list API keys", errorTypeServerError, errorCodeAPIKeyListFailed)
+		return
+	}
+
 	limit := 50
 	if raw := c.Query("limit"); raw != "" {
 		if n, err := strconv.Atoi(raw); err == nil && n > 0 && n <= 500 {
@@ -305,7 +321,7 @@ func (s *Server) listAPIKeys(c *gin.Context) {
 
 	keys, err := s.Store.ListAPIKeys(c.Request.Context(), limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to list API keys"}})
+		renderAPIError(c, http.StatusInternalServerError, "Failed to list API keys", errorTypeServerError, errorCodeAPIKeyListFailed)
 		return
 	}
 
@@ -337,6 +353,10 @@ func (s *Server) usageSummary(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Unauthorized"}})
 		return
 	}
+	if s.Store == nil {
+		renderAPIError(c, http.StatusInternalServerError, "Failed to fetch usage summary", errorTypeServerError, errorCodeUsageSummaryFailed)
+		return
+	}
 
 	apiKeyID := c.Query("api_key_id")
 	if apiKeyID == "" {
@@ -365,13 +385,13 @@ func (s *Server) usageSummary(c *gin.Context) {
 
 	summary, err := s.Store.GetUsageSummary(c.Request.Context(), apiKeyID, from, to)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to fetch usage summary"}})
+		renderAPIError(c, http.StatusInternalServerError, "Failed to fetch usage summary", errorTypeServerError, errorCodeUsageSummaryFailed)
 		return
 	}
 
 	recent, err := s.Store.ListRecentUsage(c.Request.Context(), apiKeyID, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to fetch recent usage"}})
+		renderAPIError(c, http.StatusInternalServerError, "Failed to fetch recent usage", errorTypeServerError, errorCodeUsageRecentFailed)
 		return
 	}
 
@@ -396,7 +416,7 @@ func (s *Server) usageSummary(c *gin.Context) {
 func (s *Server) createAPIKey(c *gin.Context) {
 	var req models.CreateAPIKeyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "Invalid request body"}})
+		renderAPIError(c, http.StatusBadRequest, "Invalid request body", errorTypeInvalidRequest, errorCodeInvalidRequestBody)
 		return
 	}
 
@@ -412,7 +432,7 @@ func (s *Server) createAPIKey(c *gin.Context) {
 
 	secret, err := security.GenerateSecretToken(32)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to generate API key"}})
+		renderAPIError(c, http.StatusInternalServerError, "Failed to generate API key", errorTypeServerError, errorCodeAPIKeyGenerateFailed)
 		return
 	}
 
@@ -429,7 +449,7 @@ func (s *Server) createAPIKey(c *gin.Context) {
 		ExpiresAt:          req.ExpiresAt,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to create API key"}})
+		renderAPIError(c, http.StatusInternalServerError, "Failed to create API key", errorTypeServerError, errorCodeAPIKeyCreateFailed)
 		return
 	}
 
@@ -450,12 +470,12 @@ func (s *Server) createAPIKey(c *gin.Context) {
 func (s *Server) revokeAPIKey(c *gin.Context) {
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "Missing API key id"}})
+		renderAPIError(c, http.StatusBadRequest, "Missing API key id", errorTypeInvalidRequest, errorCodeMissingAPIKeyID)
 		return
 	}
 
 	if err := s.Store.RevokeAPIKey(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"message": "API key not found or already inactive"}})
+		renderAPIError(c, http.StatusNotFound, "API key not found or already inactive", errorTypeInvalidRequest, errorCodeAPIKeyNotFound)
 		return
 	}
 
@@ -470,25 +490,25 @@ func (s *Server) revokeAPIKey(c *gin.Context) {
 func (s *Server) rotateAPIKey(c *gin.Context) {
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "Missing API key id"}})
+		renderAPIError(c, http.StatusBadRequest, "Missing API key id", errorTypeInvalidRequest, errorCodeMissingAPIKeyID)
 		return
 	}
 
 	var req models.RotateAPIKeyRequest
 	if err := c.ShouldBindJSON(&req); err != nil && err != io.EOF {
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "Invalid request body"}})
+		renderAPIError(c, http.StatusBadRequest, "Invalid request body", errorTypeInvalidRequest, errorCodeInvalidRequestBody)
 		return
 	}
 
 	old, err := s.Store.GetActiveAPIKeyByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"message": "API key not found or inactive"}})
+		renderAPIError(c, http.StatusNotFound, "API key not found or inactive", errorTypeInvalidRequest, errorCodeAPIKeyNotFound)
 		return
 	}
 
 	gracePeriod := req.GracePeriodSec
 	if gracePeriod < 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "grace_period_sec must be >= 0"}})
+		renderAPIError(c, http.StatusBadRequest, "grace_period_sec must be >= 0", errorTypeInvalidRequest, errorCodeInvalidGracePeriod)
 		return
 	}
 
@@ -499,7 +519,7 @@ func (s *Server) rotateAPIKey(c *gin.Context) {
 
 	newSecret, err := security.GenerateSecretToken(32)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to generate new API key"}})
+		renderAPIError(c, http.StatusInternalServerError, "Failed to generate new API key", errorTypeServerError, errorCodeAPIKeyGenerateFailed)
 		return
 	}
 
@@ -514,7 +534,7 @@ func (s *Server) rotateAPIKey(c *gin.Context) {
 		RateLimitPerMinute: old.RateLimitPerMinute,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": "Failed to rotate API key"}})
+		renderAPIError(c, http.StatusInternalServerError, "Failed to rotate API key", errorTypeServerError, errorCodeAPIKeyRotateFailed)
 		return
 	}
 
