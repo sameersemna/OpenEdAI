@@ -117,6 +117,45 @@ func TestLoadFallsBackForMalformedHealthDegradedLatency(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsNonPositiveRequestTimeout(t *testing.T) {
+	t.Setenv("API_KEY_HASH_PEPPER", "test-pepper")
+	t.Setenv("REQUEST_TIMEOUT_SECONDS", "0")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for non-positive REQUEST_TIMEOUT_SECONDS")
+	}
+	if !strings.Contains(err.Error(), "REQUEST_TIMEOUT_SECONDS") {
+		t.Fatalf("expected error mentioning REQUEST_TIMEOUT_SECONDS, got %v", err)
+	}
+}
+
+func TestLoadRejectsMalformedServiceURLs(t *testing.T) {
+	t.Setenv("API_KEY_HASH_PEPPER", "test-pepper")
+	t.Setenv("LITELLM_BASE_URL", "://missing")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for malformed LITELLM_BASE_URL")
+	}
+	if !strings.Contains(err.Error(), "LITELLM_BASE_URL") {
+		t.Fatalf("expected error mentioning LITELLM_BASE_URL, got %v", err)
+	}
+}
+
+func TestLoadStrictValidationRejectsUnsafeDefaultPepper(t *testing.T) {
+	t.Setenv("CONFIG_STRICT_VALIDATION", "true")
+	t.Setenv("API_KEY_HASH_PEPPER", "change-this-pepper")
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected strict validation failure for insecure pepper")
+	}
+	if !strings.Contains(err.Error(), "insecure default") {
+		t.Fatalf("expected insecure default pepper error, got %v", err)
+	}
+}
+
 func TestResolvedHealthDegradedLatencyMS(t *testing.T) {
 	t.Run("returns configured value", func(t *testing.T) {
 		cfg := Settings{HealthDegradedLatencyMS: 3500}

@@ -20,6 +20,7 @@ type ServiceEndpoint struct {
 
 const defaultCriticalDependencies = "postgres,redis,litellm,elasticsearch"
 const defaultHealthDegradedLatencyMS = 2000
+const defaultUnsafePepper = "change-this-pepper"
 
 func DefaultCriticalDependencies() string {
 	return defaultCriticalDependencies
@@ -152,6 +153,9 @@ func Load() (Settings, error) {
 	if cfg.APIKeyHashPepper == "" {
 		return Settings{}, fmt.Errorf("API_KEY_HASH_PEPPER is required")
 	}
+	if isStrictConfigValidationEnabled() && cfg.APIKeyHashPepper == defaultUnsafePepper {
+		return Settings{}, fmt.Errorf("API_KEY_HASH_PEPPER uses insecure default value")
+	}
 	if cfg.HealthDegradedLatencyMS < 0 {
 		return Settings{}, fmt.Errorf("HEALTH_DEGRADED_LATENCY_MS must be >= 0")
 	}
@@ -169,6 +173,27 @@ func Load() (Settings, error) {
 	}
 	if cfg.PostgresMaxConnLifetimeSeconds <= 0 {
 		return Settings{}, fmt.Errorf("POSTGRES_MAX_CONN_LIFETIME_SECONDS must be > 0")
+	}
+	if cfg.RequestTimeoutSeconds <= 0 {
+		return Settings{}, fmt.Errorf("REQUEST_TIMEOUT_SECONDS must be > 0")
+	}
+	if cfg.LiteLLMTimeoutSeconds <= 0 {
+		return Settings{}, fmt.Errorf("LITELLM_TIMEOUT_SECONDS must be > 0")
+	}
+	if cfg.ElasticsearchTimeoutSeconds <= 0 {
+		return Settings{}, fmt.Errorf("ELASTICSEARCH_TIMEOUT_SECONDS must be > 0")
+	}
+	if cfg.QdrantTimeoutSeconds <= 0 {
+		return Settings{}, fmt.Errorf("QDRANT_TIMEOUT_SECONDS must be > 0")
+	}
+	if err := validateHTTPURL("LITELLM_BASE_URL", cfg.LiteLLMBaseURL); err != nil {
+		return Settings{}, err
+	}
+	if err := validateHTTPURL("ELASTICSEARCH_URL", cfg.ElasticsearchURL); err != nil {
+		return Settings{}, err
+	}
+	if err := validateHTTPURL("QDRANT_URL", cfg.QdrantURL); err != nil {
+		return Settings{}, err
 	}
 
 	if cfg.ElasticsearchUsername == "" {
@@ -275,4 +300,23 @@ func getEnvBool(key string, fallback bool) bool {
 	default:
 		return fallback
 	}
+}
+
+func isStrictConfigValidationEnabled() bool {
+	return getEnvBool("CONFIG_STRICT_VALIDATION", false)
+}
+
+func validateHTTPURL(name, raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("%s must be a valid URL", name)
+	}
+	scheme := strings.ToLower(strings.TrimSpace(u.Scheme))
+	if scheme != "http" && scheme != "https" {
+		return fmt.Errorf("%s must use http or https scheme", name)
+	}
+	if strings.TrimSpace(u.Hostname()) == "" {
+		return fmt.Errorf("%s must include host", name)
+	}
+	return nil
 }
