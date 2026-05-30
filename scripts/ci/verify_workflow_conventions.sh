@@ -345,6 +345,11 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract artifact manifest path assertion OK')
 
+            if 'FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing explicit FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7 in manifest path assertion step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: explicit expected signed artifact count assignment OK')
+
             if 'make fast-contract-checksums-generate' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract checksum generation step')
             else:

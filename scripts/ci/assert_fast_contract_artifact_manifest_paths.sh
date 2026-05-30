@@ -22,6 +22,26 @@ files = payload.get("files")
 if not isinstance(files, list) or not files:
     raise SystemExit("[contracts][fail] artifact manifest files must be a non-empty array")
 
+signed_artifact_count = payload.get("signed_artifact_count")
+if not isinstance(signed_artifact_count, int) or signed_artifact_count < 1:
+    raise SystemExit("[contracts][fail] artifact manifest signed_artifact_count must be a positive integer")
+if signed_artifact_count != len(files):
+    raise SystemExit("[contracts][fail] artifact manifest signed_artifact_count must match files length")
+
+expected_signed_count_raw = os.getenv("FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT", "").strip()
+if expected_signed_count_raw:
+    try:
+        expected_signed_count = int(expected_signed_count_raw)
+    except ValueError as exc:
+        raise SystemExit("[contracts][fail] FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT must be an integer") from exc
+    if signed_artifact_count != expected_signed_count:
+        raise SystemExit(
+            f"[contracts][fail] artifact manifest signed_artifact_count mismatch (actual={signed_artifact_count} expected={expected_signed_count})"
+        )
+
+if files != sorted(files):
+    raise SystemExit("[contracts][fail] artifact manifest files must be lexicographically sorted")
+
 seen_normalized = set()
 for entry in files:
     if not isinstance(entry, str) or not entry:

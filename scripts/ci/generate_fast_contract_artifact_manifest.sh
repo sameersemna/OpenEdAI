@@ -39,6 +39,7 @@ files = [
     consistency_json,
     kpi_json,
 ]
+files = sorted(files)
 
 allowed_prefixes = ["docs/reports/", "artifacts/contracts/"]
 env_prefixes = os.getenv("FAST_CONTRACT_ALLOWED_PREFIXES", "").strip()

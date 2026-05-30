@@ -57,6 +57,8 @@
 - Fast contract artifact manifest validation: `make fast-contract-artifact-manifest-validate`
 - Fast contract artifact manifest validator self-test: `make fast-contract-artifact-manifest-validate-selftest`
 - Fast contract artifact manifest path integrity assertion: `make fast-contract-artifact-manifest-assert-paths`
+  - Enforces lexicographically sorted file paths and normalized/unique entries.
+  - Supports explicit count lock: `FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=<n> make fast-contract-artifact-manifest-assert-paths`.
 - Fast contract artifact manifest path integrity assertion self-test: `make fast-contract-artifact-manifest-assert-paths-selftest`
 - Fast contract artifact checksum generation: `make fast-contract-checksums-generate FAST_CONTRACT_REPORT=docs/reports/<report>.md`
 - Fast contract artifact checksum verification: `make fast-contract-checksums-verify`
