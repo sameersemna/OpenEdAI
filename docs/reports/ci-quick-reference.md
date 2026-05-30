@@ -61,6 +61,8 @@
   - Supports explicit count lock: `FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=<n> make fast-contract-artifact-manifest-assert-paths`.
   - Supports version-aware count map: `FAST_CONTRACT_SIGNED_ARTIFACT_COUNT_BY_VERSION=v1=7,v2=8 make fast-contract-artifact-manifest-assert-paths`.
 - Fast contract artifact manifest path integrity assertion self-test: `make fast-contract-artifact-manifest-assert-paths-selftest`
+- Fast contract artifact manifest version-lock self-test: `make fast-contract-artifact-manifest-version-lock-selftest`
+- Fast contract signed-count version-map parser self-test: `make fast-contract-signed-count-version-map-parser-selftest`
 - Fast contract artifact checksum generation: `make fast-contract-checksums-generate FAST_CONTRACT_REPORT=docs/reports/<report>.md`
 - Fast contract artifact checksum verification: `make fast-contract-checksums-verify`
 - Fast contract artifact checksum verifier self-test: `make fast-contract-checksums-verify-selftest`
@@ -241,6 +243,8 @@
     - `make fast-contract-consistency-kpi-assert-selftest`
     - `make fast-contract-artifact-manifest-validate-selftest`
     - `make fast-contract-artifact-manifest-assert-paths-selftest`
+    - `make fast-contract-artifact-manifest-version-lock-selftest`
+    - `make fast-contract-signed-count-version-map-parser-selftest`
     - `make fast-contract-checksums-verify-selftest`
     - `make fast-contract-checksums-tamper-selftest`
     - `make fast-contract-gate-manifest-assert-selftest`

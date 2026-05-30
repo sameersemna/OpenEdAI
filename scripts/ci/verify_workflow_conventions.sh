@@ -61,6 +61,8 @@ FAST_CONTRACT_REQUIRED_ORDER = [
     'Validate fast contract artifact manifest JSON',
     'Validate fast contract artifact manifest validator behavior',
     'Validate fast contract artifact manifest path assertion behavior',
+    'Validate fast contract artifact manifest version-lock behavior',
+    'Validate fast contract signed-count version-map parser behavior',
     'Assert fast contract artifact manifest path integrity',
     'Generate fast contract artifact checksums',
     'Verify fast contract artifact checksums',
@@ -341,6 +343,16 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: fast contract artifact manifest path assertion selftest OK')
 
+            if 'make fast-contract-artifact-manifest-version-lock-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest version-lock selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract artifact manifest version-lock selftest OK')
+
+            if 'make fast-contract-signed-count-version-map-parser-selftest' not in run_blocks:
+                errors.append('.github/workflows/health-contract.yml: missing fast contract signed-count version-map parser selftest step')
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast contract signed-count version-map parser selftest OK')
+
             if 'make fast-contract-artifact-manifest-assert-paths' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing fast contract artifact manifest path assertion step')
             else:
@@ -415,6 +427,8 @@ else:
             'make fast-contract-consistency-kpi-assert-selftest',
             'make fast-contract-artifact-manifest-validate-selftest',
             'make fast-contract-artifact-manifest-assert-paths-selftest',
+            'make fast-contract-artifact-manifest-version-lock-selftest',
+            'make fast-contract-signed-count-version-map-parser-selftest',
             'make fast-contract-checksums-verify-selftest',
             'make fast-contract-checksums-tamper-selftest',
             'make fast-contract-gate-manifest-assert-selftest',

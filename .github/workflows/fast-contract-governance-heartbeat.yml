@@ -65,6 +65,12 @@ jobs:
       - name: Validate fast contract artifact manifest path assertion behavior
         run: make fast-contract-artifact-manifest-assert-paths-selftest
 
+      - name: Validate fast contract artifact manifest version-lock behavior
+        run: make fast-contract-artifact-manifest-version-lock-selftest
+
+      - name: Validate fast contract signed-count version-map parser behavior
+        run: make fast-contract-signed-count-version-map-parser-selftest
+
       - name: Validate fast contract checksum verifier behavior
         run: make fast-contract-checksums-verify-selftest
 
