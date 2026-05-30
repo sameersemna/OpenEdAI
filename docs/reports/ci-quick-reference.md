@@ -75,6 +75,7 @@
 - Focused management route contracts (auth + read-only store errors): `make test-management-route-contract`
 - Contract environment status snapshot: `make contract-env-status`
 - Contract environment status snapshot (JSON): `make contract-env-status-json`
+- Contract environment status self-test (JSON + strict failure semantics): `make contract-env-selftest`
 - Pre-push hook install (interactive): `make install-prepush-hook`
 - Pre-push hook install dry-run: `make install-prepush-hook-dry-run`
 - Pre-push hook install force: `make install-prepush-hook-force`
