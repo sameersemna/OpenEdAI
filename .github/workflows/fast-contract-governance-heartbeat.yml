@@ -77,6 +77,9 @@ jobs:
       - name: Validate fast contract signed-count lock error-message behavior
         run: make fast-contract-signed-count-lock-error-messages-selftest
 
+      - name: Validate fast contract gate verdict reason-code behavior
+        run: make fast-contract-gate-verdict-reason-codes-selftest
+
       - name: Validate fast contract checksum verifier behavior
         run: make fast-contract-checksums-verify-selftest
 
