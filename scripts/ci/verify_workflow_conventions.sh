@@ -521,6 +521,7 @@ else:
             'make verify-workflow-conventions-fast-contract-heartbeat-unexpected-over-missing-priority-selftest',
             'make verify-workflow-conventions-fast-contract-heartbeat-step-name-lock-selftest',
             'make verify-workflow-conventions-fast-contract-heartbeat-step-name-duplicate-selftest',
+            'make verify-workflow-conventions-fast-contract-heartbeat-step-name-vs-command-priority-selftest',
             'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',
