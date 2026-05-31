@@ -53,6 +53,9 @@ jobs:
       - name: Validate workflow conventions heartbeat required-command order
         run: make verify-workflow-conventions-fast-contract-heartbeat-required-command-order-selftest
 
+      - name: Validate workflow conventions heartbeat mixed-fault priority
+        run: make verify-workflow-conventions-fast-contract-heartbeat-mixed-fault-priority-selftest
+
       - name: Validate fast contract report markdown validator behavior
         run: make fast-contract-report-validate-selftest
 

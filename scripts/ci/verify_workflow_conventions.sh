@@ -512,6 +512,7 @@ else:
             'make verify-workflow-conventions-fast-contract-heartbeat-duplicate-required-command-selftest',
             'make verify-workflow-conventions-fast-contract-heartbeat-required-command-priority-selftest',
             'make verify-workflow-conventions-fast-contract-heartbeat-required-command-order-selftest',
+            'make verify-workflow-conventions-fast-contract-heartbeat-mixed-fault-priority-selftest',
             'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',
