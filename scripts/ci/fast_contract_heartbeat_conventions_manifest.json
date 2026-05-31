@@ -1,6 +1,6 @@
 {
   "schema_version": "v1",
-  "expected_job_step_count": 55,
+  "expected_job_step_count": 56,
   "required_run_commands": [
     "make verify-workflow-conventions",
     "make verify-workflow-conventions-fast-contract-expected-count-selftest",
@@ -23,6 +23,7 @@
     "make verify-workflow-conventions-fast-contract-heartbeat-manifest-selftest",
     "make verify-workflow-conventions-fast-contract-heartbeat-manifest-version-selftest",
     "make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-selftest",
+    "make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-vs-step-name-order-priority-selftest",
     "make verify-workflow-conventions-fast-contract-heartbeat-manifest-run-order-selftest",
     "make verify-workflow-conventions-fast-contract-heartbeat-manifest-command-class-order-selftest",
     "make verify-workflow-conventions-fast-contract-heartbeat-manifest-command-class-priority-selftest",
