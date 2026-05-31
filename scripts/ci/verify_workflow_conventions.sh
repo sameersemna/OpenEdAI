@@ -155,6 +155,24 @@ else:
                 errors.append(
                     f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: duplicate entry in required_run_commands'
                 )
+            else:
+                first_required_command = 'make verify-workflow-conventions'
+                if commands[0] != first_required_command:
+                    errors.append(
+                        f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid required_run_commands order '
+                        f'(first command must be "{first_required_command}")'
+                    )
+                else:
+                    saw_fast_contract_command = False
+                    for command in commands:
+                        if command.startswith('make fast-contract-'):
+                            saw_fast_contract_command = True
+                        elif command.startswith('make verify-workflow-conventions') and saw_fast_contract_command:
+                            errors.append(
+                                f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid required_run_commands order '
+                                f'(verify-workflow command after fast-contract command: "{command}")'
+                            )
+                            break
 
             step_names = manifest_data.get('required_step_names')
             if not isinstance(step_names, list) or not step_names:
@@ -169,6 +187,17 @@ else:
                 errors.append(
                     f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: duplicate entry in required_step_names'
                 )
+            else:
+                expected_required_step_names_order = [
+                    'Validate workflow conventions heartbeat mixed-fault priority',
+                    'Validate workflow conventions heartbeat unexpected-command allowlist',
+                    'Validate workflow conventions heartbeat unexpected-over-missing priority',
+                ]
+                if step_names != expected_required_step_names_order:
+                    errors.append(
+                        f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid required_step_names order '
+                        f'(expected: {", ".join(expected_required_step_names_order)})'
+                    )
 
             if not errors:
                 heartbeat_required_commands = list(commands)

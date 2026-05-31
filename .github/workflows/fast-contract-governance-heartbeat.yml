@@ -80,6 +80,12 @@ jobs:
       - name: Validate workflow conventions heartbeat manifest top-level keys lock
         run: make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-selftest
 
+      - name: Validate workflow conventions heartbeat manifest run-command order lock
+        run: make verify-workflow-conventions-fast-contract-heartbeat-manifest-run-order-selftest
+
+      - name: Validate workflow conventions heartbeat manifest step-name order lock
+        run: make verify-workflow-conventions-fast-contract-heartbeat-manifest-step-name-order-selftest
+
       - name: Validate workflow conventions heartbeat step-count lock
         run: make verify-workflow-conventions-fast-contract-heartbeat-step-count-selftest
 

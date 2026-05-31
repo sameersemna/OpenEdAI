@@ -137,6 +137,8 @@
 - Verify heartbeat manifest schema fixture (manifest contract validation): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-selftest`
 - Verify heartbeat manifest schema-version lock fixture (supported manifest versions): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-version-selftest`
 - Verify heartbeat manifest top-level keys lock fixture (reject unknown manifest keys): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-selftest`
+- Verify heartbeat manifest run-command order lock fixture (first command and command-class order): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-run-order-selftest`
+- Verify heartbeat manifest step-name order lock fixture (critical step-name sequence): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-step-name-order-selftest`
 - Verify heartbeat step-count lock fixture (manifest-backed step count): `make verify-workflow-conventions-fast-contract-heartbeat-step-count-selftest`
 - Verify heartbeat make-step-name lock fixture (non-empty labels for make-run steps): `make verify-workflow-conventions-fast-contract-heartbeat-make-step-name-selftest`
 - Run artifact verifier self-test (includes expected failures): `make verify-governance-artifacts-selftest`
