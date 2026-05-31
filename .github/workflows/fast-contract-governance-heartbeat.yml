@@ -77,6 +77,9 @@ jobs:
       - name: Validate workflow conventions heartbeat step-count lock
         run: make verify-workflow-conventions-fast-contract-heartbeat-step-count-selftest
 
+      - name: Validate workflow conventions heartbeat make-step-name lock
+        run: make verify-workflow-conventions-fast-contract-heartbeat-make-step-name-selftest
+
       - name: Validate fast contract report markdown validator behavior
         run: make fast-contract-report-validate-selftest
 

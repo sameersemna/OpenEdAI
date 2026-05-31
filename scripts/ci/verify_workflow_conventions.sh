@@ -572,6 +572,7 @@ else:
         run_blocks = '\n'.join(str(step.get('run', '')) for step in steps if isinstance(step, dict))
         run_lines = []
         step_names = []
+        missing_step_name_make_command = None
         for step in steps:
             if not isinstance(step, dict):
                 continue
@@ -579,12 +580,23 @@ else:
             if isinstance(step_name, str) and step_name.strip():
                 step_names.append(step_name.strip())
             run_value = step.get('run', '')
+            step_make_commands = []
             for raw_line in str(run_value).splitlines():
                 line = raw_line.strip()
                 if not line or line.startswith('#'):
                     continue
                 run_lines.append(line)
+                if line.startswith('make '):
+                    step_make_commands.append(line)
+            if (not isinstance(step_name, str) or not step_name.strip()) and step_make_commands and missing_step_name_make_command is None:
+                missing_step_name_make_command = step_make_commands[0]
         if heartbeat_manifest_ready:
+            if missing_step_name_make_command is not None:
+                errors.append(
+                    '.github/workflows/fast-contract-governance-heartbeat.yml: '
+                    f'missing step name for make run command "{missing_step_name_make_command}"'
+                )
+
             heartbeat_required_command_set = set(heartbeat_required_commands)
             heartbeat_convention_prefixes = (
                 'make verify-workflow-conventions-fast-contract-',
@@ -606,19 +618,6 @@ else:
                         errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required step name "{required_name}"')
                         break
                     checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required step name OK ({required_name})')
-
-                if not errors:
-                    actual_step_count = len(steps)
-                    if actual_step_count != heartbeat_expected_step_count:
-                        errors.append(
-                            '.github/workflows/fast-contract-governance-heartbeat.yml: '
-                            f'expected {heartbeat_expected_step_count} steps, found {actual_step_count}'
-                        )
-                    else:
-                        checks.append(
-                            '.github/workflows/fast-contract-governance-heartbeat.yml: '
-                            f'step count OK ({heartbeat_expected_step_count})'
-                        )
 
             if not errors:
                 checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: fast-contract run command allowlist OK')
@@ -648,6 +647,19 @@ else:
                         previous_position = position
                     else:
                         checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: required run command ordering OK')
+
+            if not errors:
+                actual_step_count = len(steps)
+                if actual_step_count != heartbeat_expected_step_count:
+                    errors.append(
+                        '.github/workflows/fast-contract-governance-heartbeat.yml: '
+                        f'expected {heartbeat_expected_step_count} steps, found {actual_step_count}'
+                    )
+                else:
+                    checks.append(
+                        '.github/workflows/fast-contract-governance-heartbeat.yml: '
+                        f'step count OK ({heartbeat_expected_step_count})'
+                    )
 
 if errors:
     print('[workflow-conventions][fail]')
