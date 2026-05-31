@@ -1,0 +1,1 @@
+{"generated_at":"2026-05-31T10:46:17.146560+00:00","workflow":"fast-contract-gate","overall":"PASS","reason_codes":["none"],"thresholds":{"max_fail":0,"max_unknown":0,"min_pass_rate":100.0},"observed":{"report_status":"PASS","contract_overall_status":"degraded","status_require_all_up":0,"fail":0,"unknown":0,"pass_rate_percent":100.0}}

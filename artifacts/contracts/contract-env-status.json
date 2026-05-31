@@ -1,0 +1,15 @@
+make[1]: Entering directory '/home/sameer/Public/Shared/Work/Projects/OpenEdAI'
+bash scripts/ci/check_contract_gate_env.sh status-json
+{
+  "mode": "status-json",
+  "auto_source_env": false,
+  "overall_status": "degraded",
+  "status_require_all_up": 0,
+  "api_key_hash_pepper": "missing",
+  "services": {
+    "postgres": {"host": "127.0.0.1", "port": 5432, "status": "down"},
+    "redis": {"host": "127.0.0.1", "port": 6379, "status": "down"},
+    "litellm": {"host": "127.0.0.1", "port": 4000, "status": "down"}
+  }
+}
+make[1]: Leaving directory '/home/sameer/Public/Shared/Work/Projects/OpenEdAI'

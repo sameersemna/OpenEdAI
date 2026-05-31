@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-05-31T12:46:16+02:00",
+  "workflow": "fast-contract-gate",
+  "report_path": "docs/reports/20260531-124614-fast-contract-gate-report.md",
+  "report_status": "PASS",
+  "contract_overall_status": "degraded",
+  "status_require_all_up": 0,
+  "auto_source_env": false,
+  "api_key_hash_pepper": "missing",
+  "overall": "PASS"
+}
