@@ -38,6 +38,9 @@ jobs:
       - name: Validate workflow conventions heartbeat canonical behavior
         run: make verify-workflow-conventions-fast-contract-heartbeat-canonical-selftest
 
+      - name: Validate workflow conventions heartbeat unexpected-vs-run-order priority
+        run: make verify-workflow-conventions-fast-contract-heartbeat-unexpected-vs-run-order-priority-selftest
+
       - name: Validate workflow conventions summary error-message stability
         run: make verify-workflow-conventions-fast-contract-summary-error-messages-selftest
 
