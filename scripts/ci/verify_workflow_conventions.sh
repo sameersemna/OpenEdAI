@@ -5,6 +5,7 @@ repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
 python3 - <<'PY'
+import json
 import os
 import sys
 from pathlib import Path
@@ -24,6 +25,12 @@ HELPER = Path('scripts/ci/workflow_artifact_manifest.sh')
 GOVERNANCE_CONVENTIONS_WORKFLOW = Path('.github/workflows/governance-workflow-conventions.yml')
 HEALTH_CONTRACT_WORKFLOW = Path(os.getenv('FAST_CONTRACT_HEALTH_WORKFLOW_PATH', '.github/workflows/health-contract.yml'))
 FAST_CONTRACT_HEARTBEAT_WORKFLOW = Path(os.getenv('FAST_CONTRACT_HEARTBEAT_WORKFLOW_PATH', '.github/workflows/fast-contract-governance-heartbeat.yml'))
+FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST = Path(
+    os.getenv(
+        'FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST_PATH',
+        'scripts/ci/fast_contract_heartbeat_conventions_manifest.json',
+    )
+)
 FAST_CONTRACT_REQUIRED_ORDER = [
     'Capture contract environment status JSON',
     'Validate contract environment status JSON artifact',
@@ -83,6 +90,70 @@ FAST_CONTRACT_REQUIRED_ORDER = [
 
 errors = []
 checks = []
+heartbeat_manifest_ready = False
+heartbeat_required_commands = []
+heartbeat_required_step_names = []
+
+if not FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST.exists():
+    errors.append(
+        f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: missing heartbeat conventions manifest'
+    )
+else:
+    try:
+        manifest_data = json.loads(
+            FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST.read_text(encoding='utf-8')
+        )
+    except Exception as exc:
+        errors.append(
+            f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid heartbeat conventions manifest json: {exc}'
+        )
+    else:
+        if not isinstance(manifest_data, dict):
+            errors.append(
+                f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid heartbeat conventions manifest root (expected object)'
+            )
+        else:
+            schema_version = manifest_data.get('schema_version')
+            if not isinstance(schema_version, str) or not schema_version:
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid schema_version (expected non-empty string)'
+                )
+
+            commands = manifest_data.get('required_run_commands')
+            if not isinstance(commands, list) or not commands:
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid required_run_commands (expected non-empty list)'
+                )
+            elif not all(isinstance(item, str) and item.strip() for item in commands):
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid required_run_commands entries (expected non-empty strings)'
+                )
+            elif len(set(commands)) != len(commands):
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: duplicate entry in required_run_commands'
+                )
+
+            step_names = manifest_data.get('required_step_names')
+            if not isinstance(step_names, list) or not step_names:
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid required_step_names (expected non-empty list)'
+                )
+            elif not all(isinstance(item, str) and item.strip() for item in step_names):
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid required_step_names entries (expected non-empty strings)'
+                )
+            elif len(set(step_names)) != len(step_names):
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: duplicate entry in required_step_names'
+                )
+
+            if not errors:
+                heartbeat_required_commands = list(commands)
+                heartbeat_required_step_names = list(step_names)
+                heartbeat_manifest_ready = True
+                checks.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: heartbeat conventions manifest OK'
+                )
 
 if not HELPER.exists():
     errors.append('scripts/ci/workflow_artifact_manifest.sh: missing helper file')
@@ -505,103 +576,57 @@ else:
                 if not line or line.startswith('#'):
                     continue
                 run_lines.append(line)
-        heartbeat_required_commands = [
-            'make verify-workflow-conventions',
-            'make verify-workflow-conventions-fast-contract-expected-count-selftest',
-            'make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-selftest',
-            'make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-order-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-canonical-selftest',
-            'make verify-workflow-conventions-fast-contract-summary-error-messages-selftest',
-            'make verify-workflow-conventions-fast-contract-summary-single-fault-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-duplicate-required-command-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-required-command-priority-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-required-command-order-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-mixed-fault-priority-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-unexpected-command-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-unexpected-over-missing-priority-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-step-name-lock-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-step-name-duplicate-selftest',
-            'make verify-workflow-conventions-fast-contract-heartbeat-step-name-vs-command-priority-selftest',
-            'make fast-contract-report-validate-selftest',
-            'make fast-contract-status-validate-selftest',
-            'make fast-contract-trend-validate-selftest',
-            'make fast-contract-gate-verdict-validate-selftest',
-            'make fast-contract-artifacts-verify-selftest',
-            'make fast-contract-consistency-validate-selftest',
-            'make fast-contract-consistency-json-validate-selftest',
-            'make fast-contract-consistency-reason-codes-selftest',
-            'make fast-contract-consistency-kpi-validate-selftest',
-            'make fast-contract-consistency-kpi-assert-selftest',
-            'make fast-contract-artifact-manifest-validate-selftest',
-            'make fast-contract-artifact-manifest-assert-paths-selftest',
-            'make fast-contract-artifact-manifest-version-lock-selftest',
-            'make fast-contract-signed-count-version-map-parser-selftest',
-            'make fast-contract-signed-count-lock-matrix-selftest',
-            'make fast-contract-signed-count-lock-error-messages-selftest',
-            'make fast-contract-gate-verdict-reason-codes-selftest',
-            'make fast-contract-policy-fingerprint-validate-selftest',
-            'make fast-contract-policy-fingerprint-canonical-selftest',
-            'make fast-contract-policy-fingerprint-drift-selftest',
-            'make fast-contract-checksums-verify-selftest',
-            'make fast-contract-checksums-tamper-selftest',
-            'make fast-contract-gate-manifest-assert-selftest',
-            'make fast-contract-gate-manifest-assert',
-        ]
-        heartbeat_required_command_set = set(heartbeat_required_commands)
-        heartbeat_convention_prefixes = (
-            'make verify-workflow-conventions-fast-contract-',
-            'make fast-contract-',
-        )
+        if heartbeat_manifest_ready:
+            heartbeat_required_command_set = set(heartbeat_required_commands)
+            heartbeat_convention_prefixes = (
+                'make verify-workflow-conventions-fast-contract-',
+                'make fast-contract-',
+            )
 
-        for line in run_lines:
-            if line.startswith(heartbeat_convention_prefixes) and line not in heartbeat_required_command_set:
-                errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: unexpected fast-contract run command "{line}"')
-                break
-
-        if not errors:
-            heartbeat_required_step_names = [
-                'Validate workflow conventions heartbeat mixed-fault priority',
-                'Validate workflow conventions heartbeat unexpected-command allowlist',
-                'Validate workflow conventions heartbeat unexpected-over-missing priority',
-            ]
-            for required_name in heartbeat_required_step_names:
-                name_count = sum(1 for name in step_names if name == required_name)
-                if name_count == 0:
-                    errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: missing required step name "{required_name}"')
+            for line in run_lines:
+                if line.startswith(heartbeat_convention_prefixes) and line not in heartbeat_required_command_set:
+                    errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: unexpected fast-contract run command "{line}"')
                     break
-                if name_count > 1:
-                    errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required step name "{required_name}"')
-                    break
-                checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required step name OK ({required_name})')
 
-        if not errors:
-            checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: fast-contract run command allowlist OK')
-
-            heartbeat_command_positions = {}
-            for idx, line in enumerate(run_lines):
-                if line in heartbeat_required_commands and line not in heartbeat_command_positions:
-                    heartbeat_command_positions[line] = idx
-
-            for required in heartbeat_required_commands:
-                command_count = sum(1 for line in run_lines if line == required)
-                if command_count == 0:
-                    errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: missing required run command "{required}"')
-                    break
-                elif command_count > 1:
-                    errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required run command "{required}"')
-                    break
-                else:
-                    checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required run command OK ({required})')
-            else:
-                previous_position = -1
-                for required in heartbeat_required_commands:
-                    position = heartbeat_command_positions.get(required, -1)
-                    if position <= previous_position:
-                        errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required run command out of order "{required}"')
+            if not errors:
+                for required_name in heartbeat_required_step_names:
+                    name_count = sum(1 for name in step_names if name == required_name)
+                    if name_count == 0:
+                        errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: missing required step name "{required_name}"')
                         break
-                    previous_position = position
+                    if name_count > 1:
+                        errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required step name "{required_name}"')
+                        break
+                    checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required step name OK ({required_name})')
+
+            if not errors:
+                checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: fast-contract run command allowlist OK')
+
+                heartbeat_command_positions = {}
+                for idx, line in enumerate(run_lines):
+                    if line in heartbeat_required_commands and line not in heartbeat_command_positions:
+                        heartbeat_command_positions[line] = idx
+
+                for required in heartbeat_required_commands:
+                    command_count = sum(1 for line in run_lines if line == required)
+                    if command_count == 0:
+                        errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: missing required run command "{required}"')
+                        break
+                    elif command_count > 1:
+                        errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required run command "{required}"')
+                        break
+                    else:
+                        checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required run command OK ({required})')
                 else:
-                    checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: required run command ordering OK')
+                    previous_position = -1
+                    for required in heartbeat_required_commands:
+                        position = heartbeat_command_positions.get(required, -1)
+                        if position <= previous_position:
+                            errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required run command out of order "{required}"')
+                            break
+                        previous_position = position
+                    else:
+                        checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: required run command ordering OK')
 
 if errors:
     print('[workflow-conventions][fail]')
