@@ -139,6 +139,7 @@
 - Verify heartbeat manifest top-level keys lock fixture (reject unknown manifest keys): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-selftest`
 - Verify heartbeat manifest run-command order lock fixture (first command and command-class order): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-run-order-selftest`
 - Verify heartbeat manifest command-class order fixture (verify-workflow cannot follow fast-contract commands): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-command-class-order-selftest`
+- Verify heartbeat manifest command-class priority fixture (first offending cross-class command wins deterministically): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-command-class-priority-selftest`
 - Verify heartbeat manifest step-name order lock fixture (critical step-name sequence): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-step-name-order-selftest`
 - Verify heartbeat step-count lock fixture (manifest-backed step count): `make verify-workflow-conventions-fast-contract-heartbeat-step-count-selftest`
 - Verify heartbeat make-step-name lock fixture (non-empty labels for make-run steps): `make verify-workflow-conventions-fast-contract-heartbeat-make-step-name-selftest`
