@@ -135,6 +135,7 @@
 - Verify heartbeat step-name duplicate fixture (critical label uniqueness): `make verify-workflow-conventions-fast-contract-heartbeat-step-name-duplicate-selftest`
 - Verify heartbeat step-name-vs-command priority fixture (unexpected command beats label drift, single error): `make verify-workflow-conventions-fast-contract-heartbeat-step-name-vs-command-priority-selftest`
 - Verify heartbeat manifest schema fixture (manifest contract validation): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-selftest`
+- Verify heartbeat step-count lock fixture (manifest-backed step count): `make verify-workflow-conventions-fast-contract-heartbeat-step-count-selftest`
 - Run artifact verifier self-test (includes expected failures): `make verify-governance-artifacts-selftest`
 - Startup validation only: `make test-startup-config`
 - Focused health contract: `make test-health-contract`

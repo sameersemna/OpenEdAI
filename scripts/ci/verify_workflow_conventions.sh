@@ -93,6 +93,7 @@ checks = []
 heartbeat_manifest_ready = False
 heartbeat_required_commands = []
 heartbeat_required_step_names = []
+heartbeat_expected_step_count = None
 
 if not FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST.exists():
     errors.append(
@@ -117,6 +118,12 @@ else:
             if not isinstance(schema_version, str) or not schema_version:
                 errors.append(
                     f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid schema_version (expected non-empty string)'
+                )
+
+            expected_step_count = manifest_data.get('expected_job_step_count')
+            if not isinstance(expected_step_count, int) or expected_step_count <= 0:
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid expected_job_step_count (expected positive integer)'
                 )
 
             commands = manifest_data.get('required_run_commands')
@@ -150,6 +157,7 @@ else:
             if not errors:
                 heartbeat_required_commands = list(commands)
                 heartbeat_required_step_names = list(step_names)
+                heartbeat_expected_step_count = expected_step_count
                 heartbeat_manifest_ready = True
                 checks.append(
                     f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: heartbeat conventions manifest OK'
@@ -598,6 +606,19 @@ else:
                         errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required step name "{required_name}"')
                         break
                     checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required step name OK ({required_name})')
+
+                if not errors:
+                    actual_step_count = len(steps)
+                    if actual_step_count != heartbeat_expected_step_count:
+                        errors.append(
+                            '.github/workflows/fast-contract-governance-heartbeat.yml: '
+                            f'expected {heartbeat_expected_step_count} steps, found {actual_step_count}'
+                        )
+                    else:
+                        checks.append(
+                            '.github/workflows/fast-contract-governance-heartbeat.yml: '
+                            f'step count OK ({heartbeat_expected_step_count})'
+                        )
 
             if not errors:
                 checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: fast-contract run command allowlist OK')
