@@ -114,6 +114,18 @@ else:
                 f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid heartbeat conventions manifest root (expected object)'
             )
         else:
+            allowed_manifest_keys = {
+                'schema_version',
+                'expected_job_step_count',
+                'required_run_commands',
+                'required_step_names',
+            }
+            unknown_keys = sorted(str(key) for key in manifest_data.keys() if key not in allowed_manifest_keys)
+            if unknown_keys:
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: unexpected top-level key "{unknown_keys[0]}"'
+                )
+
             schema_version = manifest_data.get('schema_version')
             if not isinstance(schema_version, str) or not schema_version:
                 errors.append(

@@ -77,6 +77,9 @@ jobs:
       - name: Validate workflow conventions heartbeat manifest schema-version lock
         run: make verify-workflow-conventions-fast-contract-heartbeat-manifest-version-selftest
 
+      - name: Validate workflow conventions heartbeat manifest top-level keys lock
+        run: make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-selftest
+
       - name: Validate workflow conventions heartbeat step-count lock
         run: make verify-workflow-conventions-fast-contract-heartbeat-step-count-selftest
 
