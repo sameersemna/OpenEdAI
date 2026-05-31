@@ -490,6 +490,7 @@ else:
             'make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-selftest',
             'make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-order-selftest',
             'make verify-workflow-conventions-fast-contract-heartbeat-canonical-selftest',
+            'make verify-workflow-conventions-fast-contract-summary-error-messages-selftest',
             'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',
