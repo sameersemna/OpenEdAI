@@ -119,6 +119,10 @@ else:
                 errors.append(
                     f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: invalid schema_version (expected non-empty string)'
                 )
+            elif schema_version != 'v1':
+                errors.append(
+                    f'{FAST_CONTRACT_HEARTBEAT_CONVENTIONS_MANIFEST}: unsupported schema_version "{schema_version}" (supported: v1)'
+                )
 
             expected_step_count = manifest_data.get('expected_job_step_count')
             if not isinstance(expected_step_count, int) or expected_step_count <= 0:
