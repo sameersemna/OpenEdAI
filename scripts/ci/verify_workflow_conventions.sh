@@ -501,7 +501,7 @@ else:
                 if not line or line.startswith('#'):
                     continue
                 run_lines.append(line)
-        for required in [
+        heartbeat_required_commands = [
             'make verify-workflow-conventions',
             'make verify-workflow-conventions-fast-contract-expected-count-selftest',
             'make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-selftest',
@@ -510,6 +510,8 @@ else:
             'make verify-workflow-conventions-fast-contract-summary-error-messages-selftest',
             'make verify-workflow-conventions-fast-contract-summary-single-fault-selftest',
             'make verify-workflow-conventions-fast-contract-heartbeat-duplicate-required-command-selftest',
+            'make verify-workflow-conventions-fast-contract-heartbeat-required-command-priority-selftest',
+            'make verify-workflow-conventions-fast-contract-heartbeat-required-command-order-selftest',
             'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',
@@ -534,14 +536,33 @@ else:
             'make fast-contract-checksums-tamper-selftest',
             'make fast-contract-gate-manifest-assert-selftest',
             'make fast-contract-gate-manifest-assert',
-        ]:
+        ]
+
+        heartbeat_command_positions = {}
+        for idx, line in enumerate(run_lines):
+            if line in heartbeat_required_commands and line not in heartbeat_command_positions:
+                heartbeat_command_positions[line] = idx
+
+        for required in heartbeat_required_commands:
             command_count = sum(1 for line in run_lines if line == required)
             if command_count == 0:
                 errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: missing required run command "{required}"')
+                break
             elif command_count > 1:
                 errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required run command "{required}"')
+                break
             else:
                 checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required run command OK ({required})')
+        else:
+            previous_position = -1
+            for required in heartbeat_required_commands:
+                position = heartbeat_command_positions.get(required, -1)
+                if position <= previous_position:
+                    errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required run command out of order "{required}"')
+                    break
+                previous_position = position
+            else:
+                checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: required run command ordering OK')
 
 if errors:
     print('[workflow-conventions][fail]')

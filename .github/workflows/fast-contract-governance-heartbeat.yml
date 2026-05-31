@@ -47,6 +47,12 @@ jobs:
       - name: Validate workflow conventions heartbeat duplicate required-command behavior
         run: make verify-workflow-conventions-fast-contract-heartbeat-duplicate-required-command-selftest
 
+      - name: Validate workflow conventions heartbeat required-command priority
+        run: make verify-workflow-conventions-fast-contract-heartbeat-required-command-priority-selftest
+
+      - name: Validate workflow conventions heartbeat required-command order
+        run: make verify-workflow-conventions-fast-contract-heartbeat-required-command-order-selftest
+
       - name: Validate fast contract report markdown validator behavior
         run: make fast-contract-report-validate-selftest
 
