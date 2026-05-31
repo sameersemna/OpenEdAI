@@ -140,6 +140,7 @@
 - Verify heartbeat manifest schema-version lock fixture (supported manifest versions): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-version-selftest`
 - Verify heartbeat manifest top-level keys lock fixture (reject unknown manifest keys): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-selftest`
 - Verify heartbeat manifest keys-vs-step-name-order priority fixture (unknown key failure must win when both manifest faults exist): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-vs-step-name-order-priority-selftest`
+- Verify heartbeat manifest keys-vs-command-class-order priority fixture (unknown key failure must precede command-class-order fault in mixed manifests): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-vs-command-class-order-priority-selftest`
 - Verify heartbeat manifest run-command order lock fixture (first command and command-class order): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-run-order-selftest`
 - Verify heartbeat manifest command-class order fixture (verify-workflow cannot follow fast-contract commands): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-command-class-order-selftest`
 - Verify heartbeat manifest command-class priority fixture (first offending cross-class command wins deterministically): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-command-class-priority-selftest`

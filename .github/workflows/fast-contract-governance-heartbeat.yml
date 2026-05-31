@@ -89,6 +89,9 @@ jobs:
       - name: Validate workflow conventions heartbeat manifest keys-vs-step-name-order priority lock
         run: make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-vs-step-name-order-priority-selftest
 
+      - name: Validate workflow conventions heartbeat manifest keys-vs-command-class-order priority lock
+        run: make verify-workflow-conventions-fast-contract-heartbeat-manifest-keys-vs-command-class-order-priority-selftest
+
       - name: Validate workflow conventions heartbeat manifest run-command order lock
         run: make verify-workflow-conventions-fast-contract-heartbeat-manifest-run-order-selftest
 

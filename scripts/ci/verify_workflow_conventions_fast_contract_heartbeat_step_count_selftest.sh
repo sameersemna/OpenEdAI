@@ -36,7 +36,7 @@ if [[ "$rc" == "0" ]]; then
   exit 1
 fi
 
-expected='expected 56 steps, found '
+expected='expected 57 steps, found '
 if ! grep -Fq "$expected" "$output_path"; then
   echo "[workflow-conventions][fail] expected step-count error message not found" >&2
   cat "$output_path" >&2
