@@ -23,7 +23,7 @@ SMOKE_WORKFLOWS = {
 HELPER = Path('scripts/ci/workflow_artifact_manifest.sh')
 GOVERNANCE_CONVENTIONS_WORKFLOW = Path('.github/workflows/governance-workflow-conventions.yml')
 HEALTH_CONTRACT_WORKFLOW = Path(os.getenv('FAST_CONTRACT_HEALTH_WORKFLOW_PATH', '.github/workflows/health-contract.yml'))
-FAST_CONTRACT_HEARTBEAT_WORKFLOW = Path('.github/workflows/fast-contract-governance-heartbeat.yml')
+FAST_CONTRACT_HEARTBEAT_WORKFLOW = Path(os.getenv('FAST_CONTRACT_HEARTBEAT_WORKFLOW_PATH', '.github/workflows/fast-contract-governance-heartbeat.yml'))
 FAST_CONTRACT_REQUIRED_ORDER = [
     'Capture contract environment status JSON',
     'Validate contract environment status JSON artifact',
@@ -411,6 +411,25 @@ else:
             else:
                 checks.append('.github/workflows/health-contract.yml: policy fingerprint summary line convention OK')
 
+            summary_order = [
+                'echo "- Checksum status: VERIFIED"',
+                'echo "- Signed artifacts: $${signed_artifact_count}"',
+                'echo "- Policy fingerprint (sha256): $${policy_fingerprint}"',
+                'echo "- Verdict: $${verdict_overall} ($${verdict_reasons})"',
+            ]
+            summary_index = -1
+            for line in summary_order:
+                idx = run_blocks.find(line)
+                if idx < 0:
+                    errors.append(f'.github/workflows/health-contract.yml: missing fast-contract summary line "{line}"')
+                    break
+                if idx <= summary_index:
+                    errors.append('.github/workflows/health-contract.yml: fast-contract summary lines are out of required order (checksum, signed artifacts, policy fingerprint, verdict)')
+                    break
+                summary_index = idx
+            else:
+                checks.append('.github/workflows/health-contract.yml: fast-contract summary line ordering convention OK')
+
             if 'FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing explicit FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7 in manifest path assertion step')
             else:
@@ -469,6 +488,8 @@ else:
             'make verify-workflow-conventions',
             'make verify-workflow-conventions-fast-contract-expected-count-selftest',
             'make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-selftest',
+            'make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-order-selftest',
+            'make verify-workflow-conventions-fast-contract-heartbeat-canonical-selftest',
             'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',

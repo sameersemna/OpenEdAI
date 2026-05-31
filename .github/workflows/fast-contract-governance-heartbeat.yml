@@ -32,6 +32,12 @@ jobs:
       - name: Validate workflow conventions policy-fingerprint-summary behavior
         run: make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-selftest
 
+      - name: Validate workflow conventions policy-fingerprint-summary-order behavior
+        run: make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-order-selftest
+
+      - name: Validate workflow conventions heartbeat canonical behavior
+        run: make verify-workflow-conventions-fast-contract-heartbeat-canonical-selftest
+
       - name: Validate fast contract report markdown validator behavior
         run: make fast-contract-report-validate-selftest
 
