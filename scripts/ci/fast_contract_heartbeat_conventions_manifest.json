@@ -1,6 +1,6 @@
 {
   "schema_version": "v1",
-  "expected_job_step_count": 52,
+  "expected_job_step_count": 53,
   "required_run_commands": [
     "make verify-workflow-conventions",
     "make verify-workflow-conventions-fast-contract-expected-count-selftest",
@@ -27,6 +27,7 @@
     "make verify-workflow-conventions-fast-contract-heartbeat-manifest-step-name-order-selftest",
     "make verify-workflow-conventions-fast-contract-heartbeat-step-count-selftest",
     "make verify-workflow-conventions-fast-contract-heartbeat-make-step-name-selftest",
+    "make verify-workflow-conventions-fast-contract-heartbeat-verify-block-contiguous-selftest",
     "make fast-contract-report-validate-selftest",
     "make fast-contract-status-validate-selftest",
     "make fast-contract-trend-validate-selftest",

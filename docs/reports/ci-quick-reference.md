@@ -143,6 +143,7 @@
 - Verify heartbeat manifest step-name order lock fixture (critical step-name sequence): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-step-name-order-selftest`
 - Verify heartbeat step-count lock fixture (manifest-backed step count): `make verify-workflow-conventions-fast-contract-heartbeat-step-count-selftest`
 - Verify heartbeat make-step-name lock fixture (non-empty labels for make-run steps): `make verify-workflow-conventions-fast-contract-heartbeat-make-step-name-selftest`
+- Verify heartbeat verify-block contiguous lock fixture (verify-workflow commands must remain before fast-contract commands): `make verify-workflow-conventions-fast-contract-heartbeat-verify-block-contiguous-selftest`
 - Run artifact verifier self-test (includes expected failures): `make verify-governance-artifacts-selftest`
 - Startup validation only: `make test-startup-config`
 - Focused health contract: `make test-health-contract`

@@ -654,6 +654,27 @@ else:
                     break
 
             if not errors:
+                first_fast_contract_idx = None
+                for idx, line in enumerate(run_lines):
+                    if line.startswith('make fast-contract-'):
+                        first_fast_contract_idx = idx
+                        break
+
+                if first_fast_contract_idx is not None:
+                    for line in run_lines[first_fast_contract_idx + 1:]:
+                        if line.startswith('make verify-workflow-conventions'):
+                            errors.append(
+                                '.github/workflows/fast-contract-governance-heartbeat.yml: '
+                                f'invalid run command class boundary (verify-workflow command after fast-contract command: "{line}")'
+                            )
+                            break
+                    else:
+                        checks.append(
+                            '.github/workflows/fast-contract-governance-heartbeat.yml: '
+                            'verify-workflow command block is contiguous before fast-contract commands'
+                        )
+
+            if not errors:
                 for required_name in heartbeat_required_step_names:
                     name_count = sum(1 for name in step_names if name == required_name)
                     if name_count == 0:
