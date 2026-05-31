@@ -68,6 +68,9 @@ jobs:
       - name: Validate workflow conventions heartbeat step-name duplicate
         run: make verify-workflow-conventions-fast-contract-heartbeat-step-name-duplicate-selftest
 
+      - name: Validate workflow conventions heartbeat required-step-name order
+        run: make verify-workflow-conventions-fast-contract-heartbeat-required-step-name-order-selftest
+
       - name: Validate workflow conventions heartbeat step-name-vs-command priority
         run: make verify-workflow-conventions-fast-contract-heartbeat-step-name-vs-command-priority-selftest
 

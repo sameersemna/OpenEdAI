@@ -675,6 +675,7 @@ else:
                         )
 
             if not errors:
+                required_step_name_positions = {}
                 for required_name in heartbeat_required_step_names:
                     name_count = sum(1 for name in step_names if name == required_name)
                     if name_count == 0:
@@ -683,7 +684,25 @@ else:
                     if name_count > 1:
                         errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required step name "{required_name}"')
                         break
+                    required_step_name_positions[required_name] = step_names.index(required_name)
                     checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required step name OK ({required_name})')
+
+            if not errors:
+                previous_step_position = -1
+                for required_name in heartbeat_required_step_names:
+                    position = required_step_name_positions[required_name]
+                    if position <= previous_step_position:
+                        errors.append(
+                            '.github/workflows/fast-contract-governance-heartbeat.yml: '
+                            f'required step name out of order "{required_name}"'
+                        )
+                        break
+                    previous_step_position = position
+                else:
+                    checks.append(
+                        '.github/workflows/fast-contract-governance-heartbeat.yml: '
+                        'required step name ordering OK'
+                    )
 
             if not errors:
                 checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: fast-contract run command allowlist OK')

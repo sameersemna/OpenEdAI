@@ -51,7 +51,7 @@ if [[ "$rc" == "0" ]]; then
   exit 1
 fi
 
-expected='.json: invalid required_run_commands order (verify-workflow command after fast-contract command: "make verify-workflow-conventions-fast-contract-heartbeat-step-count-selftest")'
+expected='.json: invalid required_run_commands order (verify-workflow command after fast-contract command: "make verify-workflow-conventions-fast-contract-heartbeat-make-step-name-selftest")'
 if ! grep -Fq "$expected" "$output_path"; then
   echo "[workflow-conventions][fail] expected heartbeat manifest command-class-priority error message not found" >&2
   cat "$output_path" >&2

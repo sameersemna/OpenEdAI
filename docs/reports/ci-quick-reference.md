@@ -133,6 +133,7 @@
 - Verify heartbeat unexpected-over-missing priority fixture (unexpected beats missing, single error): `make verify-workflow-conventions-fast-contract-heartbeat-unexpected-over-missing-priority-selftest`
 - Verify heartbeat step-name lock fixture (critical label drift detection): `make verify-workflow-conventions-fast-contract-heartbeat-step-name-lock-selftest`
 - Verify heartbeat step-name duplicate fixture (critical label uniqueness): `make verify-workflow-conventions-fast-contract-heartbeat-step-name-duplicate-selftest`
+- Verify heartbeat required-step-name order fixture (required labels must appear in canonical sequence): `make verify-workflow-conventions-fast-contract-heartbeat-required-step-name-order-selftest`
 - Verify heartbeat step-name-vs-command priority fixture (unexpected command beats label drift, single error): `make verify-workflow-conventions-fast-contract-heartbeat-step-name-vs-command-priority-selftest`
 - Verify heartbeat manifest schema fixture (manifest contract validation): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-selftest`
 - Verify heartbeat manifest schema-version lock fixture (supported manifest versions): `make verify-workflow-conventions-fast-contract-heartbeat-manifest-version-selftest`
