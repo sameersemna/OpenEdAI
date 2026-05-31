@@ -419,16 +419,23 @@ else:
             ]
             summary_index = -1
             for line in summary_order:
-                idx = run_blocks.find(line)
-                if idx < 0:
+                line_count = run_blocks.count(line)
+                if line_count == 0:
                     errors.append(f'.github/workflows/health-contract.yml: missing fast-contract summary line "{line}"')
                     break
-                if idx <= summary_index:
-                    errors.append('.github/workflows/health-contract.yml: fast-contract summary lines are out of required order (checksum, signed artifacts, policy fingerprint, verdict)')
+                if line_count > 1:
+                    errors.append(f'.github/workflows/health-contract.yml: duplicate fast-contract summary line "{line}"')
                     break
-                summary_index = idx
             else:
-                checks.append('.github/workflows/health-contract.yml: fast-contract summary line ordering convention OK')
+                summary_index = -1
+                for line in summary_order:
+                    idx = run_blocks.find(line)
+                    if idx <= summary_index:
+                        errors.append('.github/workflows/health-contract.yml: fast-contract summary lines are out of required order (checksum, signed artifacts, policy fingerprint, verdict)')
+                        break
+                    summary_index = idx
+                else:
+                    checks.append('.github/workflows/health-contract.yml: fast-contract summary line ordering convention OK')
 
             if 'FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7' not in run_blocks:
                 errors.append('.github/workflows/health-contract.yml: missing explicit FAST_CONTRACT_EXPECTED_SIGNED_ARTIFACT_COUNT=7 in manifest path assertion step')

@@ -64,6 +64,22 @@ PY
 
 run_case "$missing_verdict_fixture" '.github/workflows/health-contract.yml: missing fast-contract summary line "echo "- Verdict: $${verdict_overall} ($${verdict_reasons})""'
 
+missing_policy_fingerprint_fixture="${tmp_dir}/health-contract-summary-missing-policy-fingerprint.yml"
+cp "${repo_root}/.github/workflows/health-contract.yml" "$missing_policy_fingerprint_fixture"
+python3 - "$missing_policy_fingerprint_fixture" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = '            echo "- Policy fingerprint (sha256): $${policy_fingerprint}"\n'
+if needle not in text:
+  raise SystemExit("[workflow-conventions][fail] fixture generation policy fingerprint summary line not found")
+path.write_text(text.replace(needle, "", 1), encoding="utf-8")
+PY
+
+run_case "$missing_policy_fingerprint_fixture" '.github/workflows/health-contract.yml: missing fast-contract summary line "echo "- Policy fingerprint (sha256): $${policy_fingerprint}""'
+
 swap_order_fixture="${tmp_dir}/health-contract-summary-order-swap.yml"
 cp "${repo_root}/.github/workflows/health-contract.yml" "$swap_order_fixture"
 python3 - "$swap_order_fixture" <<'PY'
@@ -86,5 +102,21 @@ path.write_text(text.replace(old_block, new_block, 1), encoding="utf-8")
 PY
 
 run_case "$swap_order_fixture" '.github/workflows/health-contract.yml: fast-contract summary lines are out of required order (checksum, signed artifacts, policy fingerprint, verdict)'
+
+duplicate_verdict_fixture="${tmp_dir}/health-contract-summary-duplicate-verdict.yml"
+cp "${repo_root}/.github/workflows/health-contract.yml" "$duplicate_verdict_fixture"
+python3 - "$duplicate_verdict_fixture" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = '            echo "- Verdict: $${verdict_overall} ($${verdict_reasons})"\n'
+if needle not in text:
+  raise SystemExit("[workflow-conventions][fail] fixture generation verdict summary line not found")
+path.write_text(text.replace(needle, needle + needle, 1), encoding="utf-8")
+PY
+
+run_case "$duplicate_verdict_fixture" '.github/workflows/health-contract.yml: duplicate fast-contract summary line "echo "- Verdict: $${verdict_overall} ($${verdict_reasons})""'
 
 echo "[workflow-conventions][ok] fast-contract summary error-message stability selftest passed"
