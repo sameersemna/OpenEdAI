@@ -131,6 +131,7 @@
 - Verify heartbeat mixed-fault priority fixture (missing beats duplicate/order, single error): `make verify-workflow-conventions-fast-contract-heartbeat-mixed-fault-priority-selftest`
 - Verify heartbeat unexpected-command allowlist fixture: `make verify-workflow-conventions-fast-contract-heartbeat-unexpected-command-selftest`
 - Verify heartbeat unexpected-over-missing priority fixture (unexpected beats missing, single error): `make verify-workflow-conventions-fast-contract-heartbeat-unexpected-over-missing-priority-selftest`
+- Verify heartbeat step-name lock fixture (critical label drift detection): `make verify-workflow-conventions-fast-contract-heartbeat-step-name-lock-selftest`
 - Run artifact verifier self-test (includes expected failures): `make verify-governance-artifacts-selftest`
 - Startup validation only: `make test-startup-config`
 - Focused health contract: `make test-health-contract`

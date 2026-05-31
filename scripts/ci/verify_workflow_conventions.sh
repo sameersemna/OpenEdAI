@@ -492,9 +492,13 @@ else:
         steps = heartbeat_job.get('steps', []) if isinstance(heartbeat_job, dict) else []
         run_blocks = '\n'.join(str(step.get('run', '')) for step in steps if isinstance(step, dict))
         run_lines = []
+        step_names = []
         for step in steps:
             if not isinstance(step, dict):
                 continue
+            step_name = step.get('name', '')
+            if isinstance(step_name, str) and step_name.strip():
+                step_names.append(step_name.strip())
             run_value = step.get('run', '')
             for raw_line in str(run_value).splitlines():
                 line = raw_line.strip()
@@ -515,6 +519,7 @@ else:
             'make verify-workflow-conventions-fast-contract-heartbeat-mixed-fault-priority-selftest',
             'make verify-workflow-conventions-fast-contract-heartbeat-unexpected-command-selftest',
             'make verify-workflow-conventions-fast-contract-heartbeat-unexpected-over-missing-priority-selftest',
+            'make verify-workflow-conventions-fast-contract-heartbeat-step-name-lock-selftest',
             'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',
@@ -550,6 +555,22 @@ else:
             if line.startswith(heartbeat_convention_prefixes) and line not in heartbeat_required_command_set:
                 errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: unexpected fast-contract run command "{line}"')
                 break
+
+        if not errors:
+            heartbeat_required_step_names = [
+                'Validate workflow conventions heartbeat mixed-fault priority',
+                'Validate workflow conventions heartbeat unexpected-command allowlist',
+                'Validate workflow conventions heartbeat unexpected-over-missing priority',
+            ]
+            for required_name in heartbeat_required_step_names:
+                name_count = sum(1 for name in step_names if name == required_name)
+                if name_count == 0:
+                    errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: missing required step name "{required_name}"')
+                    break
+                if name_count > 1:
+                    errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required step name "{required_name}"')
+                    break
+                checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required step name OK ({required_name})')
 
         if not errors:
             checks.append('.github/workflows/fast-contract-governance-heartbeat.yml: fast-contract run command allowlist OK')
