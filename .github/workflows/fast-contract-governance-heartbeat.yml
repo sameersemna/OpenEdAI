@@ -41,6 +41,12 @@ jobs:
       - name: Validate workflow conventions summary error-message stability
         run: make verify-workflow-conventions-fast-contract-summary-error-messages-selftest
 
+      - name: Validate workflow conventions summary single-fault determinism
+        run: make verify-workflow-conventions-fast-contract-summary-single-fault-selftest
+
+      - name: Validate workflow conventions heartbeat duplicate required-command behavior
+        run: make verify-workflow-conventions-fast-contract-heartbeat-duplicate-required-command-selftest
+
       - name: Validate fast contract report markdown validator behavior
         run: make fast-contract-report-validate-selftest
 

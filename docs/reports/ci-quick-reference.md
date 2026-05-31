@@ -124,6 +124,8 @@
 - Verify policy-fingerprint-summary-order workflow conventions negative fixture: `make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-order-selftest`
 - Verify heartbeat canonical-command workflow conventions negative fixture: `make verify-workflow-conventions-fast-contract-heartbeat-canonical-selftest`
 - Verify fast-contract summary error-message stability fixture: `make verify-workflow-conventions-fast-contract-summary-error-messages-selftest` (missing checksum/verdict/policy-fingerprint lines, ordering drift, and duplicate verdict line)
+- Verify fast-contract summary single-fault determinism fixture: `make verify-workflow-conventions-fast-contract-summary-single-fault-selftest`
+- Verify heartbeat duplicate required-command workflow conventions fixture: `make verify-workflow-conventions-fast-contract-heartbeat-duplicate-required-command-selftest`
 - Run artifact verifier self-test (includes expected failures): `make verify-governance-artifacts-selftest`
 - Startup validation only: `make test-startup-config`
 - Focused health contract: `make test-health-contract`

@@ -491,6 +491,16 @@ else:
         heartbeat_job = jobs.get('fast-contract-governance-heartbeat', {}) if isinstance(jobs, dict) else {}
         steps = heartbeat_job.get('steps', []) if isinstance(heartbeat_job, dict) else []
         run_blocks = '\n'.join(str(step.get('run', '')) for step in steps if isinstance(step, dict))
+        run_lines = []
+        for step in steps:
+            if not isinstance(step, dict):
+                continue
+            run_value = step.get('run', '')
+            for raw_line in str(run_value).splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                run_lines.append(line)
         for required in [
             'make verify-workflow-conventions',
             'make verify-workflow-conventions-fast-contract-expected-count-selftest',
@@ -498,6 +508,8 @@ else:
             'make verify-workflow-conventions-fast-contract-policy-fingerprint-summary-order-selftest',
             'make verify-workflow-conventions-fast-contract-heartbeat-canonical-selftest',
             'make verify-workflow-conventions-fast-contract-summary-error-messages-selftest',
+            'make verify-workflow-conventions-fast-contract-summary-single-fault-selftest',
+            'make verify-workflow-conventions-fast-contract-heartbeat-duplicate-required-command-selftest',
             'make fast-contract-report-validate-selftest',
             'make fast-contract-status-validate-selftest',
             'make fast-contract-trend-validate-selftest',
@@ -523,8 +535,11 @@ else:
             'make fast-contract-gate-manifest-assert-selftest',
             'make fast-contract-gate-manifest-assert',
         ]:
-            if required not in run_blocks:
+            command_count = sum(1 for line in run_lines if line == required)
+            if command_count == 0:
                 errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: missing required run command "{required}"')
+            elif command_count > 1:
+                errors.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: duplicate required run command "{required}"')
             else:
                 checks.append(f'.github/workflows/fast-contract-governance-heartbeat.yml: required run command OK ({required})')
 
